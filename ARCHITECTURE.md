@@ -54,15 +54,17 @@ com.example.booklend
 ├── cli/                          BookLendCliRunner — second inbound adapter (ApplicationRunner)
 │                                 Drives the same use case ports as the REST controllers
 │
-└── shared/                       Cross-cutting infrastructure and contracts
-    ├── application/
-    │   └── port/out/             ClockPort, DomainEventPublisher
-    ├── domain/
-    │   └── event/                DomainEvent (interface)
-    └── infrastructure/
-        ├── clock/                SystemClockAdapter
-        ├── event/                SpringDomainEventPublisher
-        └── web/                  GlobalExceptionHandler
+├── shared/                       Cross-cutting infrastructure and contracts
+│   ├── application/
+│   │   └── port/out/             ClockPort, DomainEventPublisher
+│   ├── domain/
+│   │   └── event/                DomainEvent (interface)
+│   └── infrastructure/
+│       ├── clock/                SystemClockAdapter
+│       └── event/                SpringDomainEventPublisher
+│
+└── web/                          GlobalExceptionHandler (@RestControllerAdvice)
+                                  Top-level — imports from all contexts, excluded from slice cycle rules
 ```
 
 ## Bounded contexts
