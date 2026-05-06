@@ -1,4 +1,4 @@
-package com.example.booklend.cli;
+package com.example.booklend.lending.api.cli;
 
 import com.example.booklend.catalog.application.port.in.CatalogAdminUseCase;
 import com.example.booklend.catalog.domain.BookId;
@@ -12,6 +12,7 @@ import com.example.booklend.lending.domain.LoanId;
 import com.example.booklend.lending.domain.Reservation;
 import com.example.booklend.member.application.port.in.MemberAdminUseCase;
 import com.example.booklend.member.domain.MemberId;
+import org.jspecify.annotations.NonNull;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -21,7 +22,7 @@ import java.util.List;
 import java.util.Scanner;
 
 /**
- * CLI adapter — second inbound adapter for BorrowBookUseCase (same port as LoanController).
+ * Second inbound adapter for BorrowBookUseCase — same port as LoanController, different driving mechanism.
  * Activate: java -jar booklend.jar --booklend.cli.enabled=true --spring.main.web-application-type=none
  */
 @Component
@@ -50,7 +51,7 @@ public class BookLendCliRunner implements ApplicationRunner {
     }
 
     @Override
-    public void run(ApplicationArguments args) {
+    public void run(@NonNull ApplicationArguments args) {
         Scanner scanner = new Scanner(System.in);
         System.out.println("=== BookLend CLI ===");
         printHelp();
@@ -66,15 +67,15 @@ public class BookLendCliRunner implements ApplicationRunner {
 
             try {
                 switch (command) {
-                    case "borrow"             -> handleBorrow(parts);
-                    case "return"             -> handleReturn(parts);
-                    case "reserve"            -> handleReserve(parts);
-                    case "add-book"           -> handleAddBook(parts);
-                    case "add-member"         -> handleAddMember(parts);
-                    case "clear-restriction"  -> handleClearRestriction(parts);
-                    case "loans"              -> handleLoans(parts);
-                    case "help"               -> printHelp();
-                    case "quit", "exit"       -> { System.out.println("Bye."); return; }
+                    case "borrow"            -> handleBorrow(parts);
+                    case "return"            -> handleReturn(parts);
+                    case "reserve"           -> handleReserve(parts);
+                    case "add-book"          -> handleAddBook(parts);
+                    case "add-member"        -> handleAddMember(parts);
+                    case "clear-restriction" -> handleClearRestriction(parts);
+                    case "loans"             -> handleLoans(parts);
+                    case "help"              -> printHelp();
+                    case "quit", "exit"      -> { System.out.println("Bye."); return; }
                     default -> System.out.println("Unknown command: " + command + ". Type 'help'.");
                 }
             } catch (Exception e) {
