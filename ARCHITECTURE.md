@@ -22,6 +22,8 @@ com.example.booklend
 │
 ├── lending/                      Bounded context: borrow/return/reserve lifecycle
 │   ├── api/                      REST controllers, DTOs (inbound adapter)
+│   │   └── cli/                  BookLendCliRunner — second inbound adapter (ApplicationRunner)
+│   │                             Drives the same use case ports as the REST controllers
 │   ├── application/
 │   │   ├── port/in/              BorrowBookUseCase, ReturnBookUseCase,
 │   │   │                         ReserveBookUseCase, LoanQueryUseCase
@@ -33,10 +35,9 @@ com.example.booklend
 │   │   └── exception/            LoanNotFoundException, DuplicateReservationException,
 │   │                             OverdueLoanException
 │   └── infrastructure/
-│       ├── persistence/          LoanPersistenceAdapter, ReservationPersistenceAdapter (JPA)
-│       │                         LoanPostgresPersistenceAdapter, ReservationPostgresPersistenceAdapter (JDBC)
-│       │                         JPA entities and Spring Data repositories
-│       └── event/                ReservationNotificationHandler (@TransactionalEventListener)
+│       └── persistence/          LoanPersistenceAdapter, ReservationPersistenceAdapter (JPA)
+│                                 LoanPostgresPersistenceAdapter, ReservationPostgresPersistenceAdapter (JDBC)
+│                                 JPA entities and Spring Data repositories
 │
 ├── member/                       Bounded context: member identity and borrowing eligibility
 │   ├── api/                      REST controllers, DTOs (inbound adapter)
@@ -44,15 +45,11 @@ com.example.booklend
 │   │   ├── port/in/              MemberAdminUseCase
 │   │   └── port/out/             LoadMemberPort, SaveMemberPort
 │   ├── domain/                   Member (aggregate root), MemberId, MemberStatus
-│   │   ├── event/                MemberRestrictedEvent
 │   │   └── exception/            MemberNotFoundException, MemberRestrictedException,
 │   │                             MaxLoansExceededException
 │   └── infrastructure/
 │       └── persistence/          MemberPersistenceAdapter (JPA), MemberPostgresPersistenceAdapter (JDBC)
 │                                 MemberJpaEntity, MemberJpaRepository
-│
-├── cli/                          BookLendCliRunner — second inbound adapter (ApplicationRunner)
-│                                 Drives the same use case ports as the REST controllers
 │
 ├── shared/                       Cross-cutting infrastructure and contracts
 │   ├── application/
@@ -61,7 +58,8 @@ com.example.booklend
 │   │   └── event/                DomainEvent (interface)
 │   └── infrastructure/
 │       ├── clock/                SystemClockAdapter
-│       └── event/                SpringDomainEventPublisher
+│       ├── event/                OutboxDomainEventPublisher
+│       └── persistence/          OutboxEventJpaEntity, OutboxEventJpaRepository
 │
 └── web/                          GlobalExceptionHandler (@RestControllerAdvice)
                                   Top-level — imports from all contexts, excluded from slice cycle rules
@@ -79,7 +77,7 @@ Owns the borrow/return/reserve lifecycle. `Loan` and `Reservation` are its aggre
 Owns member identity and borrowing eligibility. `Member` tracks `activeLoansCount` and `lateReturnCount` as denormalised counters to enforce borrowing invariants (`assertCanBorrow`, max-3 loans, RESTRICTED status) without querying the loans table. Updates are driven by `lending` application services.
 
 ### shared
-Cross-cutting contracts that no single context owns: `DomainEvent` interface, `ClockPort`, `DomainEventPublisher`, `GlobalExceptionHandler`. `BookLendCliRunner` lives at the top-level `cli` package — it is an inbound adapter, not shared infrastructure.
+Cross-cutting contracts that no single context owns: `DomainEvent` interface, `ClockPort`, `DomainEventPublisher`, `GlobalExceptionHandler`, outbox persistence.
 
 ## Cross-context dependency rules
 
@@ -115,7 +113,7 @@ Identity types (`BookId`, `MemberId`) are small value objects that travel freely
 | `CatalogAdminUseCase` | catalog | `BookController` + `BookLendCliRunner`              |
 | `MemberAdminUseCase`  | member  | `MemberController` + `BookLendCliRunner`            |
 
-`ClockPort` makes time injectable — `SystemClockAdapter` in production, `FakeClockAdapter` in unit tests. `DomainEventPublisher` decouples services from Spring's `ApplicationEventPublisher` — replaced by `InMemoryDomainEventPublisher` in unit tests.
+`ClockPort` makes time injectable — `SystemClockAdapter` in production, `FakeClockAdapter` in unit tests. `DomainEventPublisher` decouples services from the outbox implementation — replaced by `InMemoryDomainEventPublisher` in unit tests.
 
 ## Persistence adapters
 
@@ -130,56 +128,39 @@ Swapping persistence technology requires zero changes to domain or application l
 
 ## Event flows
 
-### Flow 1: Book returned → reservation notification
+### Flow: Book returned → outbox → notification
 
-Domain aggregates register their own events. `ReturnBookService` collects and publishes them after all state is saved.
+Domain aggregates register their own events. `ReturnBookService` collects and publishes them after all state is saved. Publishing writes to the outbox table inside the same transaction — guaranteed delivery even if the app crashes after commit.
 
 ```
-ReturnBookService (lending.application)
+ReturnBookService (lending.application)  [@Transactional]
   │
   ├─ loan.returnLoan(now)
   │     → Loan registers BookReturnedEvent internally
   │
   ├─ member.recordLoanReturned(wasLate, now)
-  │     → Member registers MemberRestrictedEvent internally (if threshold exceeded)
+  │     → updates activeLoansCount, lateReturnCount, status (no event)
   │
   ├─ book.markAvailable()
   │
-  ├─ saveLoan / saveMember / saveBook          ← all in one @Transactional
+  ├─ saveLoan / saveMember / saveBook
   │
   ├─ loadReservationPort.findFirstByBookId()
   │     if present: saveReservationPort.deleteReservation()
   │     (reservation delete is domain logic — lives in the transaction, not in a listener)
   │
-  └─ loan.pullDomainEvents()  → eventPublisher.publish(BookReturnedEvent)
-     member.pullDomainEvents() → eventPublisher.publish(MemberRestrictedEvent) [if triggered]
+  └─ loan.pullDomainEvents() → eventPublisher.publish(BookReturnedEvent)
           │
-          └─▶ ReservationNotificationHandler
-                  @TransactionalEventListener(AFTER_COMMIT)
-                  Fires after commit — notification failure cannot roll back the return
-                  └─ log.info("NOTIFICATION: Book available — member X is next in queue")
+          └─▶ OutboxDomainEventPublisher
+                  INSERT INTO outbox_events (event_type, payload, published=false)
+                  Atomic with business writes — rolled back together if anything fails
+
+[Future poller] reads outbox_events WHERE published=false → dispatches → marks published=true
 ```
 
 **Tested by**: `BookReturnedEventIT` — verifies reservation count before/after return; verifies FIFO queue ordering across multiple reservations.
 
-### Flow 2: Member restricted after repeated late returns
-
-```
-Member.recordLoanReturned(wasLate=true, now)
-  └─ lateReturnCount++ → if > 2: status = RESTRICTED
-                               → registers MemberRestrictedEvent internally
-
-ReturnBookService
-  └─ member.pullDomainEvents() → eventPublisher.publish(MemberRestrictedEvent)
-          │
-          └─▶ ReservationNotificationHandler
-                  @TransactionalEventListener(AFTER_COMMIT)
-                  └─ log.warn("Member X has been RESTRICTED")
-```
-
-**Tested by**: `ReturnBookServiceTest.thirdLateReturn_restrictseMember_andPublishesRestrictedEvent`
-
-### Flow 3: Borrow book (cross-context orchestration)
+### Flow: Borrow book (cross-context orchestration)
 
 ```
 BorrowBookService (lending.application)
@@ -204,9 +185,9 @@ No events published on borrow. State changes to `Book` and `Member` aggregates a
 
 ## Trade-offs
 
-- **Domain event publishing** — aggregates register their own events (`Loan.returnLoan()` registers `BookReturnedEvent`, `Member.recordLoanReturned()` registers `MemberRestrictedEvent`). The application service pulls and publishes them via `DomainEventPublisher` port. This keeps event origin in the domain without coupling domain to Spring. The alternative — `AbstractAggregateRoot` — only auto-publishes when the domain object is the JPA entity directly; our separate entity/domain-object design makes it a poor fit.
-- **`@TransactionalEventListener(AFTER_COMMIT)`** — notification handlers fire after the transaction commits. A handler failure cannot roll back a completed return. Trade-off: events are lost if the handler throws (no retry, no dead-letter). For a production system, an outbox pattern (write event to DB in same transaction, separate process dispatches) would give at-least-once delivery.
-- **Reservation delete in service, not handler** — `ReturnBookService` deletes the first reservation directly within the transaction. This is domain logic (a consequence of returning a book), not a side-effect notification. Putting it in an `@EventListener` would make it transactionally fragile and harder to reason about.
+- **Domain event publishing** — aggregates register their own events (`Loan.returnLoan()` registers `BookReturnedEvent`). The application service pulls and publishes them via `DomainEventPublisher` port. This keeps event origin in the domain without coupling domain to Spring. The alternative — `AbstractAggregateRoot` — only auto-publishes when the domain object is the JPA entity directly; our separate entity/domain-object design makes it a poor fit.
+- **Outbox pattern** — `OutboxDomainEventPublisher` writes events to `outbox_events` in the same transaction as business writes. Guarantees no event loss on crash. Delivers at-least-once semantics — a future poller must handle duplicates idempotently.
+- **Reservation delete in service, not handler** — `ReturnBookService` deletes the first reservation directly within the transaction. This is domain logic (a consequence of returning a book), not a side-effect notification. Putting it in an event listener would make it transactionally fragile and harder to reason about.
 - **Cross-context port sharing** — `lending` services import `LoadBookPort` and `LoadMemberPort` from their owning contexts rather than defining lending-specific projection ports (`BookAvailabilityPort`, `MemberEligibilityPort`). Pragmatic for a monolith but couples `lending` to `catalog` and `member` port contracts.
 - **Denormalised loan count** — `Member.activeLoansCount` is maintained by `lending` services, not computed by query. Fast, but a service bug can drift the count. An alternative is a `COUNT` query; accepted here for aggregate autonomy.
 - **No authentication** — all endpoints are open per the spec.
