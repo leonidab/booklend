@@ -45,7 +45,7 @@ class MemberTest {
     void returningLoan_decrementsCount() {
         Member member = freshMember();
         member.recordLoanTaken();
-        member.recordLoanReturned(false, Instant.now());
+        member.recordLoanReturned(false);
         assertThat(member.getActiveLoansCount()).isZero();
     }
 
@@ -53,11 +53,11 @@ class MemberTest {
     void moreThanTwoLateReturns_restrictseMember() {
         Member member = freshMember();
         member.recordLoanTaken();
-        member.recordLoanReturned(true, Instant.now());
+        member.recordLoanReturned(true);
         member.recordLoanTaken();
-        member.recordLoanReturned(true, Instant.now());
+        member.recordLoanReturned(true);
         member.recordLoanTaken();
-        member.recordLoanReturned(true, Instant.now());
+        member.recordLoanReturned(true);
 
         assertThat(member.getStatus()).isEqualTo(MemberStatus.RESTRICTED);
     }
@@ -66,9 +66,9 @@ class MemberTest {
     void exactlyTwoLateReturns_doesNotRestrict() {
         Member member = freshMember();
         member.recordLoanTaken();
-        member.recordLoanReturned(true, Instant.now());
+        member.recordLoanReturned(true);
         member.recordLoanTaken();
-        member.recordLoanReturned(true, Instant.now());
+        member.recordLoanReturned(true);
 
         assertThat(member.getStatus()).isEqualTo(MemberStatus.ACTIVE);
     }
@@ -78,7 +78,7 @@ class MemberTest {
         Member member = freshMember();
         for (int i = 0; i < 3; i++) {
             member.recordLoanTaken();
-            member.recordLoanReturned(true, Instant.now());
+            member.recordLoanReturned(true);
         }
         assertThatThrownBy(member::assertCanBorrow)
                 .isInstanceOf(MemberRestrictedException.class);
@@ -89,7 +89,7 @@ class MemberTest {
         Member member = freshMember();
         for (int i = 0; i < 3; i++) {
             member.recordLoanTaken();
-            member.recordLoanReturned(true, Instant.now());
+            member.recordLoanReturned(true);
         }
         member.clearRestriction();
 

@@ -46,7 +46,7 @@ public class LoanPersistenceAdapter implements LoadLoanPort, SaveLoanPort {
     }
 
     @Override
-    public Loan saveLoan(Loan loan) {
+    public void saveLoan(Loan loan) {
         LoanJpaEntity existing = repository.findById(loan.getId().value()).orElse(null);
         if (existing != null) {
             existing.setReturnedAt(loan.getReturnedAt());
@@ -55,7 +55,6 @@ public class LoanPersistenceAdapter implements LoadLoanPort, SaveLoanPort {
         } else {
             repository.save(toJpa(loan));
         }
-        return loan;
     }
 
     private Loan toDomain(LoanJpaEntity e) {

@@ -59,7 +59,7 @@ public class ReturnBookService implements ReturnBookUseCase {
 
         Instant now = clock.now();
         loan.returnLoan(now);
-        member.recordLoanReturned(loan.wasReturnedLate(), now);
+        member.recordLoanReturned(loan.wasReturnedLate());
         book.markAvailable();
 
         saveLoanPort.saveLoan(loan);
@@ -70,7 +70,6 @@ public class ReturnBookService implements ReturnBookUseCase {
                 .ifPresent(r -> saveReservationPort.deleteReservation(r.getId()));
 
         loan.pullDomainEvents().forEach(eventPublisher::publish);
-        member.pullDomainEvents().forEach(eventPublisher::publish);
 
         return loan;
     }

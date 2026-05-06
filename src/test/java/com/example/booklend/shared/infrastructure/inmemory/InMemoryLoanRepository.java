@@ -38,5 +38,5 @@ public class InMemoryLoanRepository implements LoadLoanPort, SaveLoanPort {
     }
 
     @Override
-    public Loan saveLoan(Loan loan) { store.put(loan.getId(), loan); return loan; }
+    public void saveLoan(Loan loan) { store.put(loan.getId(), loan);}
 }

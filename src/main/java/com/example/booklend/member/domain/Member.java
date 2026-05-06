@@ -1,6 +1,5 @@
 package com.example.booklend.member.domain;
 
-import com.example.booklend.member.domain.event.MemberRestrictedEvent;
 import com.example.booklend.member.domain.exception.MaxLoansExceededException;
 import com.example.booklend.member.domain.exception.MemberRestrictedException;
 import com.example.booklend.shared.domain.event.DomainEvent;
@@ -20,8 +19,6 @@ public class Member {
     private MemberStatus status;
     private int activeLoansCount;
     private int lateReturnCount;
-
-    private final List<DomainEvent> domainEvents = new ArrayList<>();
 
     private Member(MemberId id, String name, String email,
                    MemberStatus status, int activeLoansCount, int lateReturnCount) {
@@ -56,7 +53,7 @@ public class Member {
         activeLoansCount++;
     }
 
-    public void recordLoanReturned(boolean wasLate, Instant occurredOn) {
+    public void recordLoanReturned(boolean wasLate) {
         if (activeLoansCount <= 0) {
             throw new IllegalStateException("No active loans to return for member " + id);
         }
@@ -65,19 +62,12 @@ public class Member {
             lateReturnCount++;
             if (lateReturnCount > LATE_RETURNS_THRESHOLD) {
                 status = MemberStatus.RESTRICTED;
-                domainEvents.add(new MemberRestrictedEvent(id, occurredOn));
             }
         }
     }
 
     public void clearRestriction() {
         this.status = MemberStatus.ACTIVE;
-    }
-
-    public List<DomainEvent> pullDomainEvents() {
-        List<DomainEvent> events = List.copyOf(domainEvents);
-        domainEvents.clear();
-        return events;
     }
 
     public MemberId getId() { return id; }

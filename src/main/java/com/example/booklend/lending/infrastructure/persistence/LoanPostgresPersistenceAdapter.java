@@ -73,7 +73,7 @@ public class LoanPostgresPersistenceAdapter implements LoadLoanPort, SaveLoanPor
     }
 
     @Override
-    public Loan saveLoan(Loan loan) {
+    public void saveLoan(Loan loan) {
         jdbc.update("""
                 INSERT INTO loans (id, member_id, book_id, borrowed_at, due_date, returned_at, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -89,6 +89,5 @@ public class LoanPostgresPersistenceAdapter implements LoadLoanPort, SaveLoanPor
                 loan.getReturnedAt() != null ? Timestamp.from(loan.getReturnedAt()) : null,
                 loan.getStatus().name()
         );
-        return loan;
     }
 }

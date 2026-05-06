@@ -124,7 +124,7 @@ class BorrowBookServiceTest {
             Loan loan = service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), b.getId()));
             loanRepo.saveLoan(lateReturnedLoan(loan));
             member = memberRepo.loadMember(member.getId());
-            member.recordLoanReturned(true, NOW);
+            member.recordLoanReturned(true);
             memberRepo.save(member);
         }
 

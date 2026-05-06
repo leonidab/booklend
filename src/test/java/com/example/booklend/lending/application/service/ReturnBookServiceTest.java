@@ -11,7 +11,6 @@ import com.example.booklend.lending.domain.event.BookReturnedEvent;
 import com.example.booklend.member.domain.Member;
 import com.example.booklend.member.domain.MemberId;
 import com.example.booklend.member.domain.MemberStatus;
-import com.example.booklend.member.domain.event.MemberRestrictedEvent;
 import com.example.booklend.shared.domain.event.DomainEvent;
 import com.example.booklend.shared.infrastructure.inmemory.FakeClockAdapter;
 import com.example.booklend.shared.infrastructure.inmemory.InMemoryBookRepository;
@@ -147,10 +146,5 @@ class ReturnBookServiceTest {
         }
 
         assertThat(member.getStatus()).isEqualTo(MemberStatus.RESTRICTED);
-
-        MemberId restrictedId = member.getId();
-        List<DomainEvent> lastEvents = eventPublisher.getPublished();
-        assertThat(lastEvents).anyMatch(e -> e instanceof MemberRestrictedEvent evt
-                && evt.memberId().equals(restrictedId));
     }
 }
