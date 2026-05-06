@@ -6,7 +6,7 @@ import com.example.booklend.shared.domain.event.DomainEvent;
 
 import java.time.Instant;
 
-public record BookReturnedEvent(
+public record BookReadyForMemberEvent(
         BookId bookId,
         MemberId memberId,
         Instant occurredOn

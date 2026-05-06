@@ -7,8 +7,8 @@ import com.example.booklend.lending.application.port.in.ReturnBookUseCase;
 import com.example.booklend.lending.application.port.out.LoadLoanPort;
 import com.example.booklend.lending.application.port.out.LoadReservationPort;
 import com.example.booklend.lending.application.port.out.SaveLoanPort;
-import com.example.booklend.lending.application.port.out.SaveReservationPort;
 import com.example.booklend.lending.domain.Loan;
+import com.example.booklend.lending.domain.event.BookReadyForMemberEvent;
 import com.example.booklend.member.application.port.out.LoadMemberPort;
 import com.example.booklend.member.application.port.out.SaveMemberPort;
 import com.example.booklend.member.domain.Member;
@@ -30,14 +30,13 @@ public class ReturnBookService implements ReturnBookUseCase {
     private final LoadBookPort loadBookPort;
     private final SaveBookPort saveBookPort;
     private final LoadReservationPort loadReservationPort;
-    private final SaveReservationPort saveReservationPort;
     private final DomainEventPublisher eventPublisher;
     private final ClockPort clock;
 
     public ReturnBookService(LoadLoanPort loadLoanPort, SaveLoanPort saveLoanPort,
                              LoadMemberPort loadMemberPort, SaveMemberPort saveMemberPort,
                              LoadBookPort loadBookPort, SaveBookPort saveBookPort,
-                             LoadReservationPort loadReservationPort, SaveReservationPort saveReservationPort,
+                             LoadReservationPort loadReservationPort,
                              DomainEventPublisher eventPublisher, ClockPort clock) {
         this.loadLoanPort = loadLoanPort;
         this.saveLoanPort = saveLoanPort;
@@ -46,7 +45,6 @@ public class ReturnBookService implements ReturnBookUseCase {
         this.loadBookPort = loadBookPort;
         this.saveBookPort = saveBookPort;
         this.loadReservationPort = loadReservationPort;
-        this.saveReservationPort = saveReservationPort;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
@@ -67,7 +65,8 @@ public class ReturnBookService implements ReturnBookUseCase {
         saveBookPort.saveBook(book);
 
         loadReservationPort.findFirstByBookId(book.getId())
-                .ifPresent(r -> saveReservationPort.deleteReservation(r.getId()));
+                .ifPresent(r -> loan.registerEvent(
+                        new BookReadyForMemberEvent(book.getId(), r.getMemberId(), now)));
 
         loan.pullDomainEvents().forEach(eventPublisher::publish);
 

@@ -2,6 +2,7 @@ package com.example.booklend.web;
 
 import com.example.booklend.catalog.domain.exception.BookNotAvailableException;
 import com.example.booklend.catalog.domain.exception.BookNotFoundException;
+import com.example.booklend.lending.domain.exception.BookReservedForOtherMemberException;
 import com.example.booklend.lending.domain.exception.DuplicateReservationException;
 import com.example.booklend.lending.domain.exception.LoanNotFoundException;
 import com.example.booklend.lending.domain.exception.OverdueLoanException;
@@ -21,7 +22,7 @@ public class GlobalExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    @ExceptionHandler({BookNotAvailableException.class, DuplicateReservationException.class})
+    @ExceptionHandler({BookNotAvailableException.class, DuplicateReservationException.class, BookReservedForOtherMemberException.class})
     public ProblemDetail handleConflict(RuntimeException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
@@ -33,7 +34,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({MaxLoansExceededException.class, OverdueLoanException.class})
     public ProblemDetail handleUnprocessable(RuntimeException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

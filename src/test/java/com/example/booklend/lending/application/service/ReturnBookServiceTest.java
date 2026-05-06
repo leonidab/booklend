@@ -7,7 +7,9 @@ import com.example.booklend.lending.application.port.in.BorrowBookUseCase;
 import com.example.booklend.lending.application.port.in.ReturnBookUseCase;
 import com.example.booklend.lending.domain.Loan;
 import com.example.booklend.lending.domain.LoanStatus;
-import com.example.booklend.lending.domain.event.BookReturnedEvent;
+import com.example.booklend.lending.domain.Reservation;
+import com.example.booklend.lending.domain.ReservationId;
+import com.example.booklend.lending.domain.event.BookReadyForMemberEvent;
 import com.example.booklend.member.domain.Member;
 import com.example.booklend.member.domain.MemberId;
 import com.example.booklend.member.domain.MemberStatus;
@@ -48,8 +50,10 @@ class ReturnBookServiceTest {
         reservationRepo = new InMemoryReservationRepository();
         eventPublisher = new InMemoryDomainEventPublisher();
         clock = new FakeClockAdapter(NOW);
-        borrowService = new BorrowBookService(memberRepo, memberRepo, bookRepo, bookRepo, loanRepo, loanRepo, clock);
-        returnService = new ReturnBookService(loanRepo, loanRepo, memberRepo, memberRepo, bookRepo, bookRepo, reservationRepo, reservationRepo, eventPublisher, clock);
+        borrowService = new BorrowBookService(memberRepo, memberRepo, bookRepo, bookRepo, loanRepo, loanRepo,
+                reservationRepo, reservationRepo, clock);
+        returnService = new ReturnBookService(loanRepo, loanRepo, memberRepo, memberRepo, bookRepo, bookRepo,
+                reservationRepo, eventPublisher, clock);
     }
 
     private Member savedMember() {
@@ -102,21 +106,51 @@ class ReturnBookServiceTest {
     }
 
     @Test
-    void returnBook_publishesBookReturnedEvent() {
+    void returnBook_noEvent_whenNoReservationQueue() {
         Member member = savedMember();
         Book book = savedBook();
         Loan loan = borrowBook(member, book);
 
         returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
 
+        assertThat(eventPublisher.getPublished()).isEmpty();
+    }
+
+    @Test
+    void returnBook_publishesBookReadyForMemberEvent_whenReservationExists() {
+        Member borrower = savedMember();
+        Member waiter = savedMember();
+        Book book = savedBook();
+        Loan loan = borrowBook(borrower, book);
+
+        reservationRepo.saveReservation(Reservation.create(
+                ReservationId.newId(), book.getId(), waiter.getId(), NOW));
+
+        returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+
         List<DomainEvent> events = eventPublisher.getPublished();
-        assertThat(events).hasAtLeastOneElementOfType(BookReturnedEvent.class);
-        BookReturnedEvent event = events.stream()
-                .filter(e -> e instanceof BookReturnedEvent)
-                .map(e -> (BookReturnedEvent) e)
+        assertThat(events).hasAtLeastOneElementOfType(BookReadyForMemberEvent.class);
+        BookReadyForMemberEvent event = events.stream()
+                .filter(e -> e instanceof BookReadyForMemberEvent)
+                .map(e -> (BookReadyForMemberEvent) e)
                 .findFirst().orElseThrow();
         assertThat(event.bookId()).isEqualTo(book.getId());
-        assertThat(event.memberId()).isEqualTo(member.getId());
+        assertThat(event.memberId()).isEqualTo(waiter.getId());
+    }
+
+    @Test
+    void returnBook_keepsReservation_forExclusiveBorrow() {
+        Member borrower = savedMember();
+        Member waiter = savedMember();
+        Book book = savedBook();
+        Loan loan = borrowBook(borrower, book);
+
+        reservationRepo.saveReservation(Reservation.create(
+                ReservationId.newId(), book.getId(), waiter.getId(), NOW));
+
+        returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+
+        assertThat(reservationRepo.findFirstByBookId(book.getId())).isPresent();
     }
 
     @Test
@@ -132,7 +166,7 @@ class ReturnBookServiceTest {
     }
 
     @Test
-    void thirdLateReturn_restrictseMember_andPublishesRestrictedEvent() {
+    void thirdLateReturn_restrictsMember() {
         Member member = savedMember();
 
         for (int i = 0; i < 3; i++) {
@@ -140,7 +174,6 @@ class ReturnBookServiceTest {
             Book book = savedBook();
             Loan loan = borrowBook(member, book);
             clock.advanceTo(NOW.plus(20, ChronoUnit.DAYS));
-            eventPublisher.clear();
             returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
             member = memberRepo.loadMember(member.getId());
         }

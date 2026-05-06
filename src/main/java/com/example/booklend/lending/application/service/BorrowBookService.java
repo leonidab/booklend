@@ -5,9 +5,13 @@ import com.example.booklend.catalog.application.port.out.SaveBookPort;
 import com.example.booklend.catalog.domain.Book;
 import com.example.booklend.lending.application.port.in.BorrowBookUseCase;
 import com.example.booklend.lending.application.port.out.LoadLoanPort;
+import com.example.booklend.lending.application.port.out.LoadReservationPort;
 import com.example.booklend.lending.application.port.out.SaveLoanPort;
+import com.example.booklend.lending.application.port.out.SaveReservationPort;
 import com.example.booklend.lending.domain.Loan;
 import com.example.booklend.lending.domain.LoanId;
+import com.example.booklend.lending.domain.Reservation;
+import com.example.booklend.lending.domain.exception.BookReservedForOtherMemberException;
 import com.example.booklend.lending.domain.exception.OverdueLoanException;
 import com.example.booklend.member.application.port.out.LoadMemberPort;
 import com.example.booklend.member.application.port.out.SaveMemberPort;
@@ -28,11 +32,14 @@ public class BorrowBookService implements BorrowBookUseCase {
     private final SaveBookPort saveBookPort;
     private final LoadLoanPort loadLoanPort;
     private final SaveLoanPort saveLoanPort;
+    private final LoadReservationPort loadReservationPort;
+    private final SaveReservationPort saveReservationPort;
     private final ClockPort clock;
 
     public BorrowBookService(LoadMemberPort loadMemberPort, SaveMemberPort saveMemberPort,
                              LoadBookPort loadBookPort, SaveBookPort saveBookPort,
                              LoadLoanPort loadLoanPort, SaveLoanPort saveLoanPort,
+                             LoadReservationPort loadReservationPort, SaveReservationPort saveReservationPort,
                              ClockPort clock) {
         this.loadMemberPort = loadMemberPort;
         this.saveMemberPort = saveMemberPort;
@@ -40,6 +47,8 @@ public class BorrowBookService implements BorrowBookUseCase {
         this.saveBookPort = saveBookPort;
         this.loadLoanPort = loadLoanPort;
         this.saveLoanPort = saveLoanPort;
+        this.loadReservationPort = loadReservationPort;
+        this.saveReservationPort = saveReservationPort;
         this.clock = clock;
     }
 
@@ -59,6 +68,12 @@ public class BorrowBookService implements BorrowBookUseCase {
         Book book = loadBookPort.loadBook(command.bookId());
         book.checkAvailable();
 
+        Reservation firstReservation = loadReservationPort.findFirstByBookId(command.bookId())
+                .orElse(null);
+        if (firstReservation != null && !firstReservation.getMemberId().equals(command.memberId())) {
+            throw new BookReservedForOtherMemberException(command.bookId(), firstReservation.getMemberId());
+        }
+
         Loan loan = Loan.create(LoanId.newId(), command.memberId(), command.bookId(), now);
         member.recordLoanTaken();
         book.markUnavailable();
@@ -66,6 +81,10 @@ public class BorrowBookService implements BorrowBookUseCase {
         saveLoanPort.saveLoan(loan);
         saveMemberPort.saveMember(member);
         saveBookPort.saveBook(book);
+
+        if (firstReservation != null) {
+            saveReservationPort.deleteReservation(firstReservation.getId());
+        }
 
         return loan;
     }

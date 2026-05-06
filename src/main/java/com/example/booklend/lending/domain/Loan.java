@@ -1,7 +1,6 @@
 package com.example.booklend.lending.domain;
 
 import com.example.booklend.catalog.domain.BookId;
-import com.example.booklend.lending.domain.event.BookReturnedEvent;
 import com.example.booklend.member.domain.MemberId;
 import com.example.booklend.shared.domain.event.DomainEvent;
 
@@ -17,7 +16,6 @@ public class Loan {
     private final LoanPeriod period;
     private Instant returnedAt;
     private LoanStatus status;
-
     private final List<DomainEvent> domainEvents = new ArrayList<>();
 
     private Loan(LoanId id, MemberId memberId, BookId bookId,
@@ -45,7 +43,16 @@ public class Loan {
         }
         this.returnedAt = returnedAt;
         this.status = LoanStatus.RETURNED;
-        domainEvents.add(new BookReturnedEvent(bookId, memberId, returnedAt));
+    }
+
+    public void registerEvent(DomainEvent event) {
+        domainEvents.add(event);
+    }
+
+    public List<DomainEvent> pullDomainEvents() {
+        List<DomainEvent> copy = List.copyOf(domainEvents);
+        domainEvents.clear();
+        return copy;
     }
 
     public boolean isOverdue(Instant now) {
@@ -54,12 +61,6 @@ public class Loan {
 
     public boolean wasReturnedLate() {
         return status == LoanStatus.RETURNED && period.wasLate(returnedAt);
-    }
-
-    public List<DomainEvent> pullDomainEvents() {
-        List<DomainEvent> events = List.copyOf(domainEvents);
-        domainEvents.clear();
-        return events;
     }
 
     public LoanId getId() { return id; }

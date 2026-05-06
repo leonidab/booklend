@@ -3,21 +3,16 @@ package com.example.booklend.lending.application.service;
 import com.example.booklend.catalog.domain.Book;
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.catalog.domain.ISBN;
-import com.example.booklend.lending.application.port.in.BorrowBookUseCase;
-import com.example.booklend.lending.domain.Loan;
-import com.example.booklend.lending.domain.LoanId;
-import com.example.booklend.lending.domain.LoanPeriod;
-import com.example.booklend.lending.domain.LoanStatus;
-import com.example.booklend.lending.domain.exception.OverdueLoanException;
 import com.example.booklend.catalog.domain.exception.BookNotAvailableException;
+import com.example.booklend.lending.application.port.in.BorrowBookUseCase;
+import com.example.booklend.lending.domain.*;
+import com.example.booklend.lending.domain.exception.BookReservedForOtherMemberException;
+import com.example.booklend.lending.domain.exception.OverdueLoanException;
 import com.example.booklend.member.domain.Member;
 import com.example.booklend.member.domain.MemberId;
 import com.example.booklend.member.domain.exception.MaxLoansExceededException;
 import com.example.booklend.member.domain.exception.MemberRestrictedException;
-import com.example.booklend.shared.infrastructure.inmemory.FakeClockAdapter;
-import com.example.booklend.shared.infrastructure.inmemory.InMemoryBookRepository;
-import com.example.booklend.shared.infrastructure.inmemory.InMemoryLoanRepository;
-import com.example.booklend.shared.infrastructure.inmemory.InMemoryMemberRepository;
+import com.example.booklend.shared.infrastructure.inmemory.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +29,7 @@ class BorrowBookServiceTest {
     private InMemoryMemberRepository memberRepo;
     private InMemoryBookRepository bookRepo;
     private InMemoryLoanRepository loanRepo;
+    private InMemoryReservationRepository reservationRepo;
     private FakeClockAdapter clock;
     private BorrowBookService service;
 
@@ -42,8 +38,10 @@ class BorrowBookServiceTest {
         memberRepo = new InMemoryMemberRepository();
         bookRepo = new InMemoryBookRepository();
         loanRepo = new InMemoryLoanRepository();
+        reservationRepo = new InMemoryReservationRepository();
         clock = new FakeClockAdapter(NOW);
-        service = new BorrowBookService(memberRepo, memberRepo, bookRepo, bookRepo, loanRepo, loanRepo, clock);
+        service = new BorrowBookService(memberRepo, memberRepo, bookRepo, bookRepo, loanRepo, loanRepo,
+                reservationRepo, reservationRepo, clock);
     }
 
     private Member savedMember() {
@@ -147,6 +145,33 @@ class BorrowBookServiceTest {
         assertThatThrownBy(() -> service.borrow(
                 new BorrowBookUseCase.BorrowCommand(member.getId(), book2.getId())))
                 .isInstanceOf(OverdueLoanException.class);
+    }
+
+    @Test
+    void borrow_failsWhenBookReservedForDifferentMember() {
+        Member borrower = savedMember();
+        Member otherMember = savedMember();
+        Book book = savedAvailableBook();
+
+        reservationRepo.saveReservation(Reservation.create(
+                ReservationId.newId(), book.getId(), otherMember.getId(), NOW));
+
+        assertThatThrownBy(() -> service.borrow(
+                new BorrowBookUseCase.BorrowCommand(borrower.getId(), book.getId())))
+                .isInstanceOf(BookReservedForOtherMemberException.class);
+    }
+
+    @Test
+    void borrow_succeedsAndClearsReservation_whenMemberIsFirstInQueue() {
+        Member member = savedMember();
+        Book book = savedAvailableBook();
+
+        reservationRepo.saveReservation(Reservation.create(
+                ReservationId.newId(), book.getId(), member.getId(), NOW));
+
+        service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+
+        assertThat(reservationRepo.findFirstByBookId(book.getId())).isEmpty();
     }
 
     private Loan lateReturnedLoan(Loan original) {
