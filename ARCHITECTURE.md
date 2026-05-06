@@ -74,7 +74,7 @@ Owns the physical book collection. Sole authority over book availability (`markA
 Owns the borrow/return/reserve lifecycle. `Loan` and `Reservation` are its aggregate roots. Coordinates cross-context reads via ports from `catalog` (`LoadBookPort`, `SaveBookPort`) and `member` (`LoadMemberPort`, `SaveMemberPort`). All writes to other contexts happen within one `@Transactional` boundary — the monolith DB keeps ACID guarantees.
 
 ### member
-Owns member identity and borrowing eligibility. `Member` tracks `activeLoansCount` and `lateReturnCount` as denormalised counters to enforce borrowing invariants (`assertCanBorrow`, max-3 loans, RESTRICTED status) without querying the loans table. Updates are driven by `lending` application services.
+Owns member identity and borrowing eligibility. `Member` tracks `activeLoansCount` and `lateReturnCount` to enforce borrowing invariants (`assertCanBorrow`, max-3 loans, RESTRICTED status) without querying the loans table. Updates are driven by `lending` application services.
 
 ### shared
 Cross-cutting contracts that no single context owns: `DomainEvent` interface, `ClockPort`, `DomainEventPublisher`, `GlobalExceptionHandler`, outbox persistence.
@@ -119,10 +119,10 @@ Identity types (`BookId`, `MemberId`) are small value objects that travel freely
 
 Each persistence port has two implementations selected via `@ConditionalOnProperty(name = "booklend.persistence")`:
 
-| Value | Technology | Profile |
-|---|---|---|
-| `jpa` (default) | Spring Data JPA + Hibernate | `application-dev.properties` |
-| `postgres` | `JdbcTemplate` + explicit SQL + `ON CONFLICT` upserts | `application-prod.properties` |
+| Value           | Technology                                            | Profile                       |
+|-----------------|-------------------------------------------------------|-------------------------------|
+| `jpa` (default) | Spring Data JPA + Hibernate                           | `application-dev.properties`  |
+| `postgres`      | `JdbcTemplate` + explicit SQL + `ON CONFLICT` upserts | `application-prod.properties` |
 
 Swapping persistence technology requires zero changes to domain or application layer — only the property value changes.
 
