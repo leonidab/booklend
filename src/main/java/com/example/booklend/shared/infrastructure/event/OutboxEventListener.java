@@ -1,11 +1,11 @@
 package com.example.booklend.shared.infrastructure.event;
 
-import com.example.booklend.shared.application.port.out.DomainEventPublisher;
 import com.example.booklend.shared.domain.event.DomainEvent;
 import com.example.booklend.shared.infrastructure.persistence.entity.OutboxEventJpaEntity;
 import com.example.booklend.shared.infrastructure.persistence.repository.OutboxEventJpaRepository;
-
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -13,18 +13,18 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Component
-public class OutboxDomainEventPublisher implements DomainEventPublisher {
+public class OutboxEventListener {
 
     private final OutboxEventJpaRepository repository;
     private final ObjectMapper objectMapper;
 
-    public OutboxDomainEventPublisher(OutboxEventJpaRepository repository, ObjectMapper objectMapper) {
+    public OutboxEventListener(OutboxEventJpaRepository repository, ObjectMapper objectMapper) {
         this.repository = repository;
         this.objectMapper = objectMapper;
     }
 
-    @Override
-    public void publish(DomainEvent event) {
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void onDomainEvent(DomainEvent event) {
         try {
             String payload = objectMapper.writeValueAsString(event);
             repository.save(new OutboxEventJpaEntity(

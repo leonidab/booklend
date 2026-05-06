@@ -1,7 +1,7 @@
 package com.example.booklend.shared.infrastructure.event;
 
 import com.example.booklend.catalog.domain.BookId;
-import com.example.booklend.lending.domain.event.BookReturnedEvent;
+import com.example.booklend.lending.domain.event.BookReadyForMemberEvent;
 import com.example.booklend.member.domain.MemberId;
 import com.example.booklend.shared.infrastructure.persistence.entity.OutboxEventJpaEntity;
 import com.example.booklend.shared.infrastructure.persistence.repository.OutboxEventJpaRepository;
@@ -19,29 +19,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class OutboxDomainEventPublisherTest {
+class OutboxEventListenerTest {
 
     @Mock
     private OutboxEventJpaRepository repository;
 
-    private OutboxDomainEventPublisher publisher;
+    private OutboxEventListener publisher;
 
     @BeforeEach
     void setUp() {
-        publisher = new OutboxDomainEventPublisher(repository, new ObjectMapper());
+        publisher = new OutboxEventListener(repository, new ObjectMapper());
     }
 
     @Test
     void publish_savesRowWithCorrectEventType() {
-        publisher.publish(bookReturnedEvent());
+        publisher.onDomainEvent(bookReturnedEvent());
 
         OutboxEventJpaEntity saved = capturesaved();
-        assertThat(saved.getEventType()).isEqualTo("BookReturnedEvent");
+        assertThat(saved.getEventType()).isEqualTo("BookReadyForMemberEvent");
     }
 
     @Test
     void publish_savedRowIsUnpublished() {
-        publisher.publish(bookReturnedEvent());
+        publisher.onDomainEvent(bookReturnedEvent());
 
         assertThat(capturesaved().isPublished()).isFalse();
     }
@@ -51,7 +51,7 @@ class OutboxDomainEventPublisherTest {
         BookId bookId = BookId.newId();
         MemberId memberId = MemberId.newId();
 
-        publisher.publish(new BookReturnedEvent(bookId, memberId, Instant.now()));
+        publisher.onDomainEvent(new BookReadyForMemberEvent(bookId, memberId, Instant.now()));
 
         String payload = capturesaved().getPayload();
         assertThat(payload).contains(bookId.value().toString());
@@ -60,14 +60,14 @@ class OutboxDomainEventPublisherTest {
 
     @Test
     void publish_rowHasNonNullId() {
-        publisher.publish(bookReturnedEvent());
+        publisher.onDomainEvent(bookReturnedEvent());
 
         assertThat(capturesaved().getId()).isNotNull();
     }
 
     @Test
     void publish_rowHasCreatedAt() {
-        publisher.publish(bookReturnedEvent());
+        publisher.onDomainEvent(bookReturnedEvent());
 
         assertThat(capturesaved().getCreatedAt()).isNotNull();
     }
@@ -78,7 +78,7 @@ class OutboxDomainEventPublisherTest {
         return captor.getValue();
     }
 
-    private BookReturnedEvent bookReturnedEvent() {
-        return new BookReturnedEvent(BookId.newId(), MemberId.newId(), Instant.now());
+    private BookReadyForMemberEvent bookReturnedEvent() {
+        return new BookReadyForMemberEvent(BookId.newId(), MemberId.newId(), Instant.now());
     }
 }
