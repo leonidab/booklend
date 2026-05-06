@@ -4,11 +4,19 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.UUID;
 
 @Entity
 @Table(name = "members")
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MemberJpaEntity {
 
     @Id
@@ -20,34 +28,15 @@ public class MemberJpaEntity {
     @Column(nullable = false)
     private String email;
 
+    @Setter
     @Column(nullable = false)
     private String status;
 
+    @Setter
     @Column(nullable = false)
     private int activeLoansCount;
 
+    @Setter
     @Column(nullable = false)
     private int lateReturnCount;
-
-    protected MemberJpaEntity() {}
-
-    public MemberJpaEntity(UUID id, String name, String email, String status,
-                           int activeLoansCount, int lateReturnCount) {
-        this.id = id;
-        this.name = name;
-        this.email = email;
-        this.status = status;
-        this.activeLoansCount = activeLoansCount;
-        this.lateReturnCount = lateReturnCount;
-    }
-
-    public UUID getId() { return id; }
-    public String getName() { return name; }
-    public String getEmail() { return email; }
-    public String getStatus() { return status; }
-    public int getActiveLoansCount() { return activeLoansCount; }
-    public int getLateReturnCount() { return lateReturnCount; }
-    public void setStatus(String status) { this.status = status; }
-    public void setActiveLoansCount(int activeLoansCount) { this.activeLoansCount = activeLoansCount; }
-    public void setLateReturnCount(int lateReturnCount) { this.lateReturnCount = lateReturnCount; }
 }

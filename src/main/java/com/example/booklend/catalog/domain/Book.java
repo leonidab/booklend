@@ -1,7 +1,9 @@
 package com.example.booklend.catalog.domain;
 
 import com.example.booklend.catalog.domain.exception.BookNotAvailableException;
+import lombok.Getter;
 
+@Getter
 public class Book {
 
     private final BookId id;
@@ -39,10 +41,4 @@ public class Book {
     public void markAvailable() {
         this.available = true;
     }
-
-    public BookId getId() { return id; }
-    public ISBN getIsbn() { return isbn; }
-    public String getTitle() { return title; }
-    public String getAuthor() { return author; }
-    public boolean isAvailable() { return available; }
 }

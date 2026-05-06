@@ -12,6 +12,7 @@ import com.example.booklend.lending.domain.LoanId;
 import com.example.booklend.lending.domain.Reservation;
 import com.example.booklend.member.application.port.in.MemberAdminUseCase;
 import com.example.booklend.member.domain.MemberId;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -27,6 +28,7 @@ import java.util.Scanner;
  */
 @Component
 @ConditionalOnProperty(name = "booklend.cli.enabled", havingValue = "true")
+@RequiredArgsConstructor
 public class BookLendCliRunner implements ApplicationRunner {
 
     private final BorrowBookUseCase borrowBookUseCase;
@@ -35,20 +37,6 @@ public class BookLendCliRunner implements ApplicationRunner {
     private final CatalogAdminUseCase catalogAdminUseCase;
     private final MemberAdminUseCase memberAdminUseCase;
     private final LoanQueryUseCase loanQueryUseCase;
-
-    public BookLendCliRunner(BorrowBookUseCase borrowBookUseCase,
-                             ReturnBookUseCase returnBookUseCase,
-                             ReserveBookUseCase reserveBookUseCase,
-                             CatalogAdminUseCase catalogAdminUseCase,
-                             MemberAdminUseCase memberAdminUseCase,
-                             LoanQueryUseCase loanQueryUseCase) {
-        this.borrowBookUseCase = borrowBookUseCase;
-        this.returnBookUseCase = returnBookUseCase;
-        this.reserveBookUseCase = reserveBookUseCase;
-        this.catalogAdminUseCase = catalogAdminUseCase;
-        this.memberAdminUseCase = memberAdminUseCase;
-        this.loanQueryUseCase = loanQueryUseCase;
-    }
 
     @Override
     public void run(@NonNull ApplicationArguments args) {

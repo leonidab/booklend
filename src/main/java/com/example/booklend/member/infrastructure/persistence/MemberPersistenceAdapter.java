@@ -8,18 +8,16 @@ import com.example.booklend.member.domain.MemberStatus;
 import com.example.booklend.member.domain.exception.MemberNotFoundException;
 import com.example.booklend.member.infrastructure.persistence.entity.MemberJpaEntity;
 import com.example.booklend.member.infrastructure.persistence.repository.MemberJpaRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnProperty(name = "booklend.persistence", havingValue = "jpa", matchIfMissing = true)
+@RequiredArgsConstructor
 public class MemberPersistenceAdapter implements LoadMemberPort, SaveMemberPort {
 
     private final MemberJpaRepository repository;
-
-    public MemberPersistenceAdapter(MemberJpaRepository repository) {
-        this.repository = repository;
-    }
 
     @Override
     public Member loadMember(MemberId id) {

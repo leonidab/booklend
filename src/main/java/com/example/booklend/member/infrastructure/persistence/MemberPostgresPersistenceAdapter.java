@@ -6,6 +6,7 @@ import com.example.booklend.member.domain.Member;
 import com.example.booklend.member.domain.MemberId;
 import com.example.booklend.member.domain.MemberStatus;
 import com.example.booklend.member.domain.exception.MemberNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,13 +17,10 @@ import java.util.UUID;
 
 @Component
 @ConditionalOnProperty(name = "booklend.persistence", havingValue = "postgres")
+@RequiredArgsConstructor
 public class MemberPostgresPersistenceAdapter implements LoadMemberPort, SaveMemberPort {
 
     private final JdbcTemplate jdbc;
-
-    public MemberPostgresPersistenceAdapter(JdbcTemplate jdbc) {
-        this.jdbc = jdbc;
-    }
 
     private final RowMapper<Member> rowMapper = (rs, rowNum) -> Member.reconstitute(
             new MemberId(rs.getObject("id", UUID.class)),

@@ -9,11 +9,13 @@ import com.example.booklend.lending.domain.ReservationId;
 import com.example.booklend.lending.domain.exception.DuplicateReservationException;
 import com.example.booklend.member.application.port.out.LoadMemberPort;
 import com.example.booklend.shared.application.port.out.ClockPort;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class ReserveBookService implements ReserveBookUseCase {
 
     private final LoadMemberPort loadMemberPort;
@@ -21,16 +23,6 @@ public class ReserveBookService implements ReserveBookUseCase {
     private final LoadReservationPort loadReservationPort;
     private final SaveReservationPort saveReservationPort;
     private final ClockPort clock;
-
-    public ReserveBookService(LoadMemberPort loadMemberPort, LoadBookPort loadBookPort,
-                              LoadReservationPort loadReservationPort,
-                              SaveReservationPort saveReservationPort, ClockPort clock) {
-        this.loadMemberPort = loadMemberPort;
-        this.loadBookPort = loadBookPort;
-        this.loadReservationPort = loadReservationPort;
-        this.saveReservationPort = saveReservationPort;
-        this.clock = clock;
-    }
 
     @Override
     public Reservation reserve(ReserveCommand command) {

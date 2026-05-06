@@ -4,12 +4,17 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(name = "outbox_events")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OutboxEventJpaEntity {
 
     @Id
@@ -27,8 +32,6 @@ public class OutboxEventJpaEntity {
     @Column(nullable = false)
     private boolean published;
 
-    protected OutboxEventJpaEntity() {}
-
     public OutboxEventJpaEntity(UUID id, String eventType, String payload, Instant createdAt) {
         this.id = id;
         this.eventType = eventType;
@@ -36,10 +39,4 @@ public class OutboxEventJpaEntity {
         this.createdAt = createdAt;
         this.published = false;
     }
-
-    public UUID getId() { return id; }
-    public String getEventType() { return eventType; }
-    public String getPayload() { return payload; }
-    public Instant getCreatedAt() { return createdAt; }
-    public boolean isPublished() { return published; }
 }

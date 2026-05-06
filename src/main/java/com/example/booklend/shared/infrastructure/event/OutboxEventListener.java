@@ -3,6 +3,7 @@ package com.example.booklend.shared.infrastructure.event;
 import com.example.booklend.shared.domain.event.DomainEvent;
 import com.example.booklend.shared.infrastructure.persistence.entity.OutboxEventJpaEntity;
 import com.example.booklend.shared.infrastructure.persistence.repository.OutboxEventJpaRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -13,15 +14,11 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Component
+@RequiredArgsConstructor
 public class OutboxEventListener {
 
     private final OutboxEventJpaRepository repository;
     private final ObjectMapper objectMapper;
-
-    public OutboxEventListener(OutboxEventJpaRepository repository, ObjectMapper objectMapper) {
-        this.repository = repository;
-        this.objectMapper = objectMapper;
-    }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void onDomainEvent(DomainEvent event) {

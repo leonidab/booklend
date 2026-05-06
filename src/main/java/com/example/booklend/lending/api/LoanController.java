@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
@@ -23,19 +24,12 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/loans")
+@RequiredArgsConstructor
 public class LoanController {
 
     private final BorrowBookUseCase borrowBookUseCase;
     private final ReturnBookUseCase returnBookUseCase;
     private final LoanQueryUseCase loanQueryUseCase;
-
-    public LoanController(BorrowBookUseCase borrowBookUseCase,
-                          ReturnBookUseCase returnBookUseCase,
-                          LoanQueryUseCase loanQueryUseCase) {
-        this.borrowBookUseCase = borrowBookUseCase;
-        this.returnBookUseCase = returnBookUseCase;
-        this.loanQueryUseCase = loanQueryUseCase;
-    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

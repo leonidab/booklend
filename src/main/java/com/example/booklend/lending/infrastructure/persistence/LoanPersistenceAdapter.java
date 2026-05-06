@@ -11,6 +11,7 @@ import com.example.booklend.lending.domain.exception.LoanNotFoundException;
 import com.example.booklend.lending.infrastructure.persistence.entity.LoanJpaEntity;
 import com.example.booklend.lending.infrastructure.persistence.repository.LoanJpaRepository;
 import com.example.booklend.member.domain.MemberId;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -18,13 +19,10 @@ import java.util.List;
 
 @Component
 @ConditionalOnProperty(name = "booklend.persistence", havingValue = "jpa", matchIfMissing = true)
+@RequiredArgsConstructor
 public class LoanPersistenceAdapter implements LoadLoanPort, SaveLoanPort {
 
     private final LoanJpaRepository repository;
-
-    public LoanPersistenceAdapter(LoanJpaRepository repository) {
-        this.repository = repository;
-    }
 
     @Override
     public Loan loadLoan(LoanId id) {

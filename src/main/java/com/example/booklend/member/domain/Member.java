@@ -2,12 +2,9 @@ package com.example.booklend.member.domain;
 
 import com.example.booklend.member.domain.exception.MaxLoansExceededException;
 import com.example.booklend.member.domain.exception.MemberRestrictedException;
-import com.example.booklend.shared.domain.event.DomainEvent;
+import lombok.Getter;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-
+@Getter
 public class Member {
 
     private static final int MAX_ACTIVE_LOANS = 3;
@@ -69,11 +66,4 @@ public class Member {
     public void clearRestriction() {
         this.status = MemberStatus.ACTIVE;
     }
-
-    public MemberId getId() { return id; }
-    public String getName() { return name; }
-    public String getEmail() { return email; }
-    public MemberStatus getStatus() { return status; }
-    public int getActiveLoansCount() { return activeLoansCount; }
-    public int getLateReturnCount() { return lateReturnCount; }
 }

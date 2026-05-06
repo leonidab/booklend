@@ -6,6 +6,7 @@ import com.example.booklend.lending.application.port.out.SaveReservationPort;
 import com.example.booklend.lending.domain.Reservation;
 import com.example.booklend.lending.domain.ReservationId;
 import com.example.booklend.member.domain.MemberId;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -18,13 +19,10 @@ import java.util.UUID;
 
 @Component
 @ConditionalOnProperty(name = "booklend.persistence", havingValue = "postgres")
+@RequiredArgsConstructor
 public class ReservationPostgresPersistenceAdapter implements LoadReservationPort, SaveReservationPort {
 
     private final JdbcTemplate jdbc;
-
-    public ReservationPostgresPersistenceAdapter(JdbcTemplate jdbc) {
-        this.jdbc = jdbc;
-    }
 
     private final RowMapper<Reservation> rowMapper = (rs, rowNum) -> Reservation.reconstitute(
             new ReservationId(rs.getObject("id", UUID.class)),

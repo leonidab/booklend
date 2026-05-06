@@ -8,6 +8,7 @@ import com.example.booklend.lending.domain.ReservationId;
 import com.example.booklend.lending.infrastructure.persistence.entity.ReservationJpaEntity;
 import com.example.booklend.lending.infrastructure.persistence.repository.ReservationJpaRepository;
 import com.example.booklend.member.domain.MemberId;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -16,13 +17,10 @@ import java.util.Optional;
 
 @Component
 @ConditionalOnProperty(name = "booklend.persistence", havingValue = "jpa", matchIfMissing = true)
+@RequiredArgsConstructor
 public class ReservationPersistenceAdapter implements LoadReservationPort, SaveReservationPort {
 
     private final ReservationJpaRepository repository;
-
-    public ReservationPersistenceAdapter(ReservationJpaRepository repository) {
-        this.repository = repository;
-    }
 
     @Override
     public Optional<Reservation> findFirstByBookId(BookId bookId) {

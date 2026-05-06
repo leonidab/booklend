@@ -3,11 +3,13 @@ package com.example.booklend.lending.domain;
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.member.domain.MemberId;
 import com.example.booklend.shared.domain.event.DomainEvent;
+import lombok.Getter;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class Loan {
 
     private final LoanId id;
@@ -16,6 +18,7 @@ public class Loan {
     private final LoanPeriod period;
     private Instant returnedAt;
     private LoanStatus status;
+    @Getter(lombok.AccessLevel.NONE)
     private final List<DomainEvent> domainEvents = new ArrayList<>();
 
     private Loan(LoanId id, MemberId memberId, BookId bookId,
@@ -62,11 +65,4 @@ public class Loan {
     public boolean wasReturnedLate() {
         return status == LoanStatus.RETURNED && period.wasLate(returnedAt);
     }
-
-    public LoanId getId() { return id; }
-    public MemberId getMemberId() { return memberId; }
-    public BookId getBookId() { return bookId; }
-    public LoanPeriod getPeriod() { return period; }
-    public Instant getReturnedAt() { return returnedAt; }
-    public LoanStatus getStatus() { return status; }
 }

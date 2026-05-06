@@ -6,6 +6,7 @@ import com.example.booklend.catalog.domain.Book;
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.catalog.domain.ISBN;
 import com.example.booklend.catalog.domain.exception.BookNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,13 +18,10 @@ import java.util.UUID;
 
 @Component
 @ConditionalOnProperty(name = "booklend.persistence", havingValue = "postgres")
+@RequiredArgsConstructor
 public class BookPostgresPersistenceAdapter implements LoadBookPort, SaveBookPort {
 
     private final JdbcTemplate jdbc;
-
-    public BookPostgresPersistenceAdapter(JdbcTemplate jdbc) {
-        this.jdbc = jdbc;
-    }
 
     private final RowMapper<Book> rowMapper = (rs, rowNum) -> Book.reconstitute(
             new BookId(rs.getObject("id", UUID.class)),

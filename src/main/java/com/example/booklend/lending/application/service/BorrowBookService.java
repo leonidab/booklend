@@ -17,6 +17,7 @@ import com.example.booklend.member.application.port.out.LoadMemberPort;
 import com.example.booklend.member.application.port.out.SaveMemberPort;
 import com.example.booklend.member.domain.Member;
 import com.example.booklend.shared.application.port.out.ClockPort;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ import java.time.Instant;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class BorrowBookService implements BorrowBookUseCase {
 
     private final LoadMemberPort loadMemberPort;
@@ -35,22 +37,6 @@ public class BorrowBookService implements BorrowBookUseCase {
     private final LoadReservationPort loadReservationPort;
     private final SaveReservationPort saveReservationPort;
     private final ClockPort clock;
-
-    public BorrowBookService(LoadMemberPort loadMemberPort, SaveMemberPort saveMemberPort,
-                             LoadBookPort loadBookPort, SaveBookPort saveBookPort,
-                             LoadLoanPort loadLoanPort, SaveLoanPort saveLoanPort,
-                             LoadReservationPort loadReservationPort, SaveReservationPort saveReservationPort,
-                             ClockPort clock) {
-        this.loadMemberPort = loadMemberPort;
-        this.saveMemberPort = saveMemberPort;
-        this.loadBookPort = loadBookPort;
-        this.saveBookPort = saveBookPort;
-        this.loadLoanPort = loadLoanPort;
-        this.saveLoanPort = saveLoanPort;
-        this.loadReservationPort = loadReservationPort;
-        this.saveReservationPort = saveReservationPort;
-        this.clock = clock;
-    }
 
     @Override
     public Loan borrow(BorrowCommand command) {

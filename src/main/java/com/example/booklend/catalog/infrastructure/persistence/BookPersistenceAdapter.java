@@ -8,6 +8,7 @@ import com.example.booklend.catalog.domain.ISBN;
 import com.example.booklend.catalog.domain.exception.BookNotFoundException;
 import com.example.booklend.catalog.infrastructure.persistence.entity.BookJpaEntity;
 import com.example.booklend.catalog.infrastructure.persistence.repository.BookJpaRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -15,13 +16,10 @@ import java.util.List;
 
 @Component
 @ConditionalOnProperty(name = "booklend.persistence", havingValue = "jpa", matchIfMissing = true)
+@RequiredArgsConstructor
 public class BookPersistenceAdapter implements LoadBookPort, SaveBookPort {
 
     private final BookJpaRepository repository;
-
-    public BookPersistenceAdapter(BookJpaRepository repository) {
-        this.repository = repository;
-    }
 
     @Override
     public Book loadBook(BookId id) {

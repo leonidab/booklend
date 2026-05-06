@@ -5,20 +5,17 @@ import com.example.booklend.member.application.port.out.LoadMemberPort;
 import com.example.booklend.member.application.port.out.SaveMemberPort;
 import com.example.booklend.member.domain.Member;
 import com.example.booklend.member.domain.MemberId;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class MemberAdminService implements MemberAdminUseCase {
 
     private final LoadMemberPort loadMemberPort;
     private final SaveMemberPort saveMemberPort;
-
-    public MemberAdminService(LoadMemberPort loadMemberPort, SaveMemberPort saveMemberPort) {
-        this.loadMemberPort = loadMemberPort;
-        this.saveMemberPort = saveMemberPort;
-    }
 
     @Override
     public Member addMember(AddMemberCommand command) {

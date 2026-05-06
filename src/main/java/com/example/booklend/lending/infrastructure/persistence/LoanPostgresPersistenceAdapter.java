@@ -9,6 +9,7 @@ import com.example.booklend.lending.domain.LoanPeriod;
 import com.example.booklend.lending.domain.LoanStatus;
 import com.example.booklend.lending.domain.exception.LoanNotFoundException;
 import com.example.booklend.member.domain.MemberId;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,13 +22,10 @@ import java.util.UUID;
 
 @Component
 @ConditionalOnProperty(name = "booklend.persistence", havingValue = "postgres")
+@RequiredArgsConstructor
 public class LoanPostgresPersistenceAdapter implements LoadLoanPort, SaveLoanPort {
 
     private final JdbcTemplate jdbc;
-
-    public LoanPostgresPersistenceAdapter(JdbcTemplate jdbc) {
-        this.jdbc = jdbc;
-    }
 
     private final RowMapper<Loan> rowMapper = (rs, rowNum) -> {
         Timestamp returnedAtTs = rs.getTimestamp("returned_at");

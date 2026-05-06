@@ -2,9 +2,11 @@ package com.example.booklend.lending.domain;
 
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.member.domain.MemberId;
+import lombok.Getter;
 
 import java.time.Instant;
 
+@Getter
 public class Reservation {
 
     private final ReservationId id;
@@ -26,9 +28,4 @@ public class Reservation {
     public static Reservation reconstitute(ReservationId id, BookId bookId, MemberId memberId, Instant requestedAt) {
         return new Reservation(id, bookId, memberId, requestedAt);
     }
-
-    public ReservationId getId() { return id; }
-    public BookId getBookId() { return bookId; }
-    public MemberId getMemberId() { return memberId; }
-    public Instant getRequestedAt() { return requestedAt; }
 }
