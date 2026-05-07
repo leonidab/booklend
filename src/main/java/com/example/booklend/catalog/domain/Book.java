@@ -28,17 +28,17 @@ public class Book {
         return new Book(id, isbn, title, author, available);
     }
 
-    public void checkAvailable() {
+    public void loanedOut() {
         if (!available) {
             throw new BookNotAvailableException(id);
         }
-    }
-
-    public void markUnavailable() {
         this.available = false;
     }
 
-    public void markAvailable() {
+    public void returned() {
+        if (available) {
+            throw new IllegalStateException("Book " + id + " is already available");
+        }
         this.available = true;
     }
 }

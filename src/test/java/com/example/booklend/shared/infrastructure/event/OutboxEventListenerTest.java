@@ -3,6 +3,7 @@ package com.example.booklend.shared.infrastructure.event;
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.lending.domain.event.BookReadyForMemberEvent;
 import com.example.booklend.member.domain.MemberId;
+import com.example.booklend.shared.infrastructure.inmemory.FakeClockAdapter;
 import com.example.booklend.shared.infrastructure.persistence.entity.OutboxEventJpaEntity;
 import com.example.booklend.shared.infrastructure.persistence.repository.OutboxEventJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,8 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class OutboxEventListenerTest {
 
+    private static final Instant FIXED_NOW = Instant.parse("2026-01-15T10:00:00Z");
+
     @Mock
     private OutboxEventJpaRepository repository;
 
@@ -28,7 +31,7 @@ class OutboxEventListenerTest {
 
     @BeforeEach
     void setUp() {
-        publisher = new OutboxEventListener(repository, new ObjectMapper());
+        publisher = new OutboxEventListener(repository, new ObjectMapper(), new FakeClockAdapter(FIXED_NOW));
     }
 
     @Test
@@ -66,10 +69,10 @@ class OutboxEventListenerTest {
     }
 
     @Test
-    void publish_rowHasCreatedAt() {
+    void publish_rowHasCreatedAt_fromClock() {
         publisher.onDomainEvent(bookReturnedEvent());
 
-        assertThat(capturesaved().getCreatedAt()).isNotNull();
+        assertThat(capturesaved().getCreatedAt()).isEqualTo(FIXED_NOW);
     }
 
     private OutboxEventJpaEntity capturesaved() {

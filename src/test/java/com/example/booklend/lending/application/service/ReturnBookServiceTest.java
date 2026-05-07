@@ -1,5 +1,6 @@
 package com.example.booklend.lending.application.service;
 
+import com.example.booklend.catalog.application.service.BookLoanEventHandler;
 import com.example.booklend.catalog.domain.Book;
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.catalog.domain.ISBN;
@@ -10,9 +11,12 @@ import com.example.booklend.lending.domain.LoanStatus;
 import com.example.booklend.lending.domain.Reservation;
 import com.example.booklend.lending.domain.ReservationId;
 import com.example.booklend.lending.domain.event.BookReadyForMemberEvent;
+import com.example.booklend.member.application.service.MemberLoanEventHandler;
 import com.example.booklend.member.domain.Member;
 import com.example.booklend.member.domain.MemberId;
 import com.example.booklend.member.domain.MemberStatus;
+import com.example.booklend.shared.domain.event.BookBorrowedEvent;
+import com.example.booklend.shared.domain.event.BookReturnedEvent;
 import com.example.booklend.shared.domain.event.DomainEvent;
 import com.example.booklend.shared.infrastructure.inmemory.FakeClockAdapter;
 import com.example.booklend.shared.infrastructure.inmemory.InMemoryBookRepository;
@@ -50,10 +54,17 @@ class ReturnBookServiceTest {
         reservationRepo = new InMemoryReservationRepository();
         eventPublisher = new InMemoryDomainEventPublisher();
         clock = new FakeClockAdapter(NOW);
-        borrowService = new BorrowBookService(memberRepo, memberRepo, bookRepo, bookRepo, loanRepo, loanRepo,
-                reservationRepo, reservationRepo, clock);
-        returnService = new ReturnBookService(loanRepo, loanRepo, memberRepo, memberRepo, bookRepo, bookRepo,
-                reservationRepo, eventPublisher, clock);
+
+        MemberLoanEventHandler memberHandler = new MemberLoanEventHandler(memberRepo, memberRepo);
+        BookLoanEventHandler bookHandler = new BookLoanEventHandler(bookRepo, bookRepo);
+        eventPublisher.register(BookBorrowedEvent.class, bookHandler::onBookBorrowed);
+        eventPublisher.register(BookBorrowedEvent.class, memberHandler::onBookBorrowed);
+        eventPublisher.register(BookReturnedEvent.class, bookHandler::onBookReturned);
+        eventPublisher.register(BookReturnedEvent.class, memberHandler::onBookReturned);
+
+        borrowService = new BorrowBookService(loanRepo, loanRepo, reservationRepo, reservationRepo,
+                eventPublisher, clock);
+        returnService = new ReturnBookService(loanRepo, loanRepo, reservationRepo, eventPublisher, clock);
     }
 
     private Member savedMember() {
@@ -69,7 +80,9 @@ class ReturnBookServiceTest {
     }
 
     private Loan borrowBook(Member member, Book book) {
-        return borrowService.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+        Loan loan = borrowService.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+        eventPublisher.clear();
+        return loan;
     }
 
     @Test
@@ -106,14 +119,26 @@ class ReturnBookServiceTest {
     }
 
     @Test
-    void returnBook_noEvent_whenNoReservationQueue() {
+    void returnBook_publishesBookReturnedEvent() {
         Member member = savedMember();
         Book book = savedBook();
         Loan loan = borrowBook(member, book);
 
         returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
 
-        assertThat(eventPublisher.getPublished()).isEmpty();
+        assertThat(eventPublisher.getPublished()).hasAtLeastOneElementOfType(BookReturnedEvent.class);
+    }
+
+    @Test
+    void returnBook_noBookReadyForMemberEvent_whenNoReservationQueue() {
+        Member member = savedMember();
+        Book book = savedBook();
+        Loan loan = borrowBook(member, book);
+
+        returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+
+        assertThat(eventPublisher.getPublished())
+                .noneMatch(e -> e instanceof BookReadyForMemberEvent);
     }
 
     @Test

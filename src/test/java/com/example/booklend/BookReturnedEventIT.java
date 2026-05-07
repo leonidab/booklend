@@ -16,11 +16,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
+@ActiveProfiles("it")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class BookReturnedEventIT {
 
@@ -53,7 +55,7 @@ class BookReturnedEventIT {
     }
 
     @Test
-    void returningBook_withNoReservation_noOutboxEvent() {
+    void returningBook_withNoReservation_noBookReadyForMemberEvent() {
         Book book = addBook();
         Member member = addMember("Alice");
 
@@ -62,7 +64,8 @@ class BookReturnedEventIT {
 
         returnBookUseCase.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
 
-        assertThat(outboxRepo.findByPublishedFalse()).isEmpty();
+        assertThat(outboxRepo.findByPublishedFalse())
+                .noneMatch(e -> e.getEventType().equals("BookReadyForMemberEvent"));
     }
 
     @Test

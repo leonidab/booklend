@@ -1,16 +1,18 @@
 package com.example.booklend.lending.domain;
 
 import com.example.booklend.catalog.domain.BookId;
+import com.example.booklend.lending.domain.exception.OverdueLoanException;
 import com.example.booklend.member.domain.MemberId;
-import com.example.booklend.shared.domain.event.DomainEvent;
+import com.example.booklend.shared.domain.AggregateRoot;
+import com.example.booklend.shared.domain.event.BookBorrowedEvent;
+import com.example.booklend.shared.domain.event.BookReturnedEvent;
 import lombok.Getter;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 
 @Getter
-public class Loan {
+public class Loan extends AggregateRoot {
 
     private final LoanId id;
     private final MemberId memberId;
@@ -18,8 +20,6 @@ public class Loan {
     private final LoanPeriod period;
     private Instant returnedAt;
     private LoanStatus status;
-    @Getter(lombok.AccessLevel.NONE)
-    private final List<DomainEvent> domainEvents = new ArrayList<>();
 
     private Loan(LoanId id, MemberId memberId, BookId bookId,
                  LoanPeriod period, Instant returnedAt, LoanStatus status) {
@@ -32,7 +32,10 @@ public class Loan {
     }
 
     public static Loan create(LoanId id, MemberId memberId, BookId bookId, Instant borrowedAt) {
-        return new Loan(id, memberId, bookId, LoanPeriod.startingFrom(borrowedAt), null, LoanStatus.ACTIVE);
+        Loan loan = new Loan(id, memberId, bookId, LoanPeriod.startingFrom(borrowedAt), null, LoanStatus.ACTIVE);
+        loan.registerEvent(new BookBorrowedEvent(
+                bookId.value(), memberId.value(), id.value(), borrowedAt));
+        return loan;
     }
 
     public static Loan reconstitute(LoanId id, MemberId memberId, BookId bookId,
@@ -46,16 +49,8 @@ public class Loan {
         }
         this.returnedAt = returnedAt;
         this.status = LoanStatus.RETURNED;
-    }
-
-    public void registerEvent(DomainEvent event) {
-        domainEvents.add(event);
-    }
-
-    public List<DomainEvent> pullDomainEvents() {
-        List<DomainEvent> copy = List.copyOf(domainEvents);
-        domainEvents.clear();
-        return copy;
+        registerEvent(new BookReturnedEvent(
+                bookId.value(), memberId.value(), id.value(), wasReturnedLate(), returnedAt));
     }
 
     public boolean isOverdue(Instant now) {
@@ -64,5 +59,11 @@ public class Loan {
 
     public boolean wasReturnedLate() {
         return status == LoanStatus.RETURNED && period.wasLate(returnedAt);
+    }
+
+    public static void assertNoOverdue(Collection<Loan> loans, Instant now, MemberId memberId) {
+        if (loans.stream().anyMatch(loan -> loan.isOverdue(now))) {
+            throw new OverdueLoanException(memberId);
+        }
     }
 }

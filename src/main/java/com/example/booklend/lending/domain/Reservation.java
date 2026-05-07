@@ -1,6 +1,7 @@
 package com.example.booklend.lending.domain;
 
 import com.example.booklend.catalog.domain.BookId;
+import com.example.booklend.lending.domain.exception.BookReservedForOtherMemberException;
 import com.example.booklend.member.domain.MemberId;
 import lombok.Getter;
 
@@ -27,5 +28,15 @@ public class Reservation {
 
     public static Reservation reconstitute(ReservationId id, BookId bookId, MemberId memberId, Instant requestedAt) {
         return new Reservation(id, bookId, memberId, requestedAt);
+    }
+
+    public void assertClaimableBy(MemberId claimant) {
+        if (!this.memberId.equals(claimant)) {
+            throw new BookReservedForOtherMemberException(bookId, this.memberId);
+        }
+    }
+
+    public boolean isHeldFor(MemberId candidate) {
+        return this.memberId.equals(candidate);
     }
 }

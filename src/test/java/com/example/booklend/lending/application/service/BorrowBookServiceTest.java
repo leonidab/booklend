@@ -1,5 +1,6 @@
 package com.example.booklend.lending.application.service;
 
+import com.example.booklend.catalog.application.service.BookLoanEventHandler;
 import com.example.booklend.catalog.domain.Book;
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.catalog.domain.ISBN;
@@ -8,10 +9,12 @@ import com.example.booklend.lending.application.port.in.BorrowBookUseCase;
 import com.example.booklend.lending.domain.*;
 import com.example.booklend.lending.domain.exception.BookReservedForOtherMemberException;
 import com.example.booklend.lending.domain.exception.OverdueLoanException;
+import com.example.booklend.member.application.service.MemberLoanEventHandler;
 import com.example.booklend.member.domain.Member;
 import com.example.booklend.member.domain.MemberId;
 import com.example.booklend.member.domain.exception.MaxLoansExceededException;
 import com.example.booklend.member.domain.exception.MemberRestrictedException;
+import com.example.booklend.shared.domain.event.BookBorrowedEvent;
 import com.example.booklend.shared.infrastructure.inmemory.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +33,7 @@ class BorrowBookServiceTest {
     private InMemoryBookRepository bookRepo;
     private InMemoryLoanRepository loanRepo;
     private InMemoryReservationRepository reservationRepo;
+    private InMemoryDomainEventPublisher eventPublisher;
     private FakeClockAdapter clock;
     private BorrowBookService service;
 
@@ -39,9 +43,16 @@ class BorrowBookServiceTest {
         bookRepo = new InMemoryBookRepository();
         loanRepo = new InMemoryLoanRepository();
         reservationRepo = new InMemoryReservationRepository();
+        eventPublisher = new InMemoryDomainEventPublisher();
         clock = new FakeClockAdapter(NOW);
-        service = new BorrowBookService(memberRepo, memberRepo, bookRepo, bookRepo, loanRepo, loanRepo,
-                reservationRepo, reservationRepo, clock);
+
+        MemberLoanEventHandler memberHandler = new MemberLoanEventHandler(memberRepo, memberRepo);
+        BookLoanEventHandler bookHandler = new BookLoanEventHandler(bookRepo, bookRepo);
+        eventPublisher.register(BookBorrowedEvent.class, bookHandler::onBookBorrowed);
+        eventPublisher.register(BookBorrowedEvent.class, memberHandler::onBookBorrowed);
+
+        service = new BorrowBookService(loanRepo, loanRepo, reservationRepo, reservationRepo,
+                eventPublisher, clock);
     }
 
     private Member savedMember() {
@@ -87,6 +98,23 @@ class BorrowBookServiceTest {
         service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
 
         assertThat(memberRepo.loadMember(member.getId()).getActiveLoansCount()).isEqualTo(1);
+    }
+
+    @Test
+    void borrow_publishesBookBorrowedEvent() {
+        Member member = savedMember();
+        Book book = savedAvailableBook();
+
+        Loan loan = service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+
+        assertThat(eventPublisher.getPublished())
+                .anySatisfy(e -> {
+                    assertThat(e).isInstanceOf(BookBorrowedEvent.class);
+                    BookBorrowedEvent be = (BookBorrowedEvent) e;
+                    assertThat(be.bookId()).isEqualTo(book.getId().value());
+                    assertThat(be.memberId()).isEqualTo(member.getId().value());
+                    assertThat(be.loanId()).isEqualTo(loan.getId().value());
+                });
     }
 
     @Test

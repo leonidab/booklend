@@ -1,17 +1,11 @@
 package com.example.booklend.lending.application.service;
 
-import com.example.booklend.catalog.application.port.out.LoadBookPort;
-import com.example.booklend.catalog.application.port.out.SaveBookPort;
-import com.example.booklend.catalog.domain.Book;
 import com.example.booklend.lending.application.port.in.ReturnBookUseCase;
 import com.example.booklend.lending.application.port.out.LoadLoanPort;
 import com.example.booklend.lending.application.port.out.LoadReservationPort;
 import com.example.booklend.lending.application.port.out.SaveLoanPort;
 import com.example.booklend.lending.domain.Loan;
 import com.example.booklend.lending.domain.event.BookReadyForMemberEvent;
-import com.example.booklend.member.application.port.out.LoadMemberPort;
-import com.example.booklend.member.application.port.out.SaveMemberPort;
-import com.example.booklend.member.domain.Member;
 import com.example.booklend.shared.application.port.out.ClockPort;
 import com.example.booklend.shared.application.port.out.DomainEventPublisher;
 import lombok.RequiredArgsConstructor;
@@ -27,10 +21,6 @@ public class ReturnBookService implements ReturnBookUseCase {
 
     private final LoadLoanPort loadLoanPort;
     private final SaveLoanPort saveLoanPort;
-    private final LoadMemberPort loadMemberPort;
-    private final SaveMemberPort saveMemberPort;
-    private final LoadBookPort loadBookPort;
-    private final SaveBookPort saveBookPort;
     private final LoadReservationPort loadReservationPort;
     private final DomainEventPublisher eventPublisher;
     private final ClockPort clock;
@@ -38,21 +28,14 @@ public class ReturnBookService implements ReturnBookUseCase {
     @Override
     public Loan returnBook(ReturnCommand command) {
         Loan loan = loadLoanPort.loadLoan(command.loanId());
-        Member member = loadMemberPort.loadMember(loan.getMemberId());
-        Book book = loadBookPort.loadBook(loan.getBookId());
 
         Instant now = clock.now();
         loan.returnLoan(now);
-        member.recordLoanReturned(loan.wasReturnedLate());
-        book.markAvailable();
-
         saveLoanPort.saveLoan(loan);
-        saveMemberPort.saveMember(member);
-        saveBookPort.saveBook(book);
 
-        loadReservationPort.findFirstByBookId(book.getId())
+        loadReservationPort.findFirstByBookId(loan.getBookId())
                 .ifPresent(r -> loan.registerEvent(
-                        new BookReadyForMemberEvent(book.getId(), r.getMemberId(), now)));
+                        new BookReadyForMemberEvent(loan.getBookId(), r.getMemberId(), now)));
 
         loan.pullDomainEvents().forEach(eventPublisher::publish);
 

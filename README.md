@@ -63,4 +63,15 @@ Returned loan <uuid>  (late=false)
 ./mvnw test
 ```
 
-Domain unit tests (no Spring), application service tests (in-memory adapters), integration tests (full Spring context + H2).
+Three layers (74 tests total):
+- **Domain unit** (`*Test` in `domain` packages) — pure POJO, no Spring.
+- **Application unit** (`*Test` in `application/service` packages) — services + event handlers wired with `InMemory*Repository` fakes implementing the same ports as JPA adapters. No DB.
+- **Integration** (`*IT`) — `@SpringBootTest` with `@ActiveProfiles("it")`. Separate H2 instance (`jdbc:h2:mem:booklend-it`) so dev seed data (`data.sql`) doesn't leak into tests. Real Spring wiring, real JPA, schema auto-generated from entities.
+
+`HexagonalArchitectureTest` (ArchUnit) enforces layer + bounded-context boundaries.
+
+## Architecture
+
+DDD bounded contexts: `catalog`, `lending`, `member`, `shared`. Cross-context state changes flow as in-process domain events (`BookBorrowedEvent`, `BookReturnedEvent`) — lending publishes, catalog and member listeners react in their own context. Outbox pattern (`@TransactionalEventListener(BEFORE_COMMIT)`) captures events for downstream consumers.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for aggregate design, ports, and trade-offs.

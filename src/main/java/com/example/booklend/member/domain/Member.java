@@ -45,8 +45,7 @@ public class Member {
         }
     }
 
-    public void recordLoanTaken() {
-        assertCanBorrow();
+    public void recordLoanTaken() {assertCanBorrow();
         activeLoansCount++;
     }
 

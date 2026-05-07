@@ -1,5 +1,6 @@
 package com.example.booklend.shared.infrastructure.event;
 
+import com.example.booklend.shared.application.port.out.ClockPort;
 import com.example.booklend.shared.domain.event.DomainEvent;
 import com.example.booklend.shared.infrastructure.persistence.entity.OutboxEventJpaEntity;
 import com.example.booklend.shared.infrastructure.persistence.repository.OutboxEventJpaRepository;
@@ -10,7 +11,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
-import java.time.Instant;
 import java.util.UUID;
 
 @Component
@@ -19,6 +19,7 @@ public class OutboxEventListener {
 
     private final OutboxEventJpaRepository repository;
     private final ObjectMapper objectMapper;
+    private final ClockPort clock;
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void onDomainEvent(DomainEvent event) {
@@ -28,7 +29,7 @@ public class OutboxEventListener {
                     UUID.randomUUID(),
                     event.getClass().getSimpleName(),
                     payload,
-                    Instant.now()
+                    clock.now()
             ));
         } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialize domain event: " + event.getClass().getSimpleName(), e);
