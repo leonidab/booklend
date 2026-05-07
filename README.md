@@ -19,6 +19,7 @@ java -jar target/booklend-0.0.1-SNAPSHOT.jar
 
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
 - H2 console: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:mem:booklenddb`)
+- Health: http://localhost:8080/actuator/health
 
 ## Run — CLI mode
 
