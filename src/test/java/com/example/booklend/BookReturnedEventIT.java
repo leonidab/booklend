@@ -3,9 +3,9 @@ package com.example.booklend;
 import com.example.booklend.catalog.application.port.in.CatalogAdminUseCase;
 import com.example.booklend.catalog.domain.Book;
 import com.example.booklend.catalog.domain.ISBN;
-import com.example.booklend.lending.application.port.in.BorrowBookUseCase;
-import com.example.booklend.lending.application.port.in.ReserveBookUseCase;
-import com.example.booklend.lending.application.port.in.ReturnBookUseCase;
+import com.example.booklend.lending.application.port.in.BorrowUseCase;
+import com.example.booklend.lending.application.port.in.ReserveUseCase;
+import com.example.booklend.lending.application.port.in.ReturnUseCase;
 import com.example.booklend.lending.application.port.out.LoadReservationPort;
 import com.example.booklend.lending.domain.Loan;
 import com.example.booklend.lending.domain.exception.BookReservedForOtherMemberException;
@@ -28,9 +28,12 @@ class BookReturnedEventIT {
 
     @Autowired CatalogAdminUseCase catalogAdminUseCase;
     @Autowired MemberAdminUseCase memberAdminUseCase;
-    @Autowired BorrowBookUseCase borrowBookUseCase;
-    @Autowired ReturnBookUseCase returnBookUseCase;
-    @Autowired ReserveBookUseCase reserveBookUseCase;
+    @Autowired
+    BorrowUseCase borrowUseCase;
+    @Autowired
+    ReturnUseCase returnUseCase;
+    @Autowired
+    ReserveUseCase reserveUseCase;
     @Autowired LoadReservationPort loadReservationPort;
     @Autowired OutboxEventJpaRepository outboxRepo;
 
@@ -40,12 +43,12 @@ class BookReturnedEventIT {
         Member borrower = addMember("Alice");
         Member waiter = addMember("Bob");
 
-        Loan loan = borrowBookUseCase.borrow(
-                new BorrowBookUseCase.BorrowCommand(borrower.getId(), book.getId()));
-        reserveBookUseCase.reserve(
-                new ReserveBookUseCase.ReserveCommand(waiter.getId(), book.getId()));
+        Loan loan = borrowUseCase.borrow(
+                new BorrowUseCase.BorrowCommand(borrower.getId(), book.getId()));
+        reserveUseCase.reserve(
+                new ReserveUseCase.ReserveCommand(waiter.getId(), book.getId()));
 
-        returnBookUseCase.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnUseCase.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
         assertThat(outboxRepo.findByPublishedFalse())
                 .anyMatch(e -> e.getEventType().equals("BookReadyForMemberEvent")
@@ -59,10 +62,10 @@ class BookReturnedEventIT {
         Book book = addBook();
         Member member = addMember("Alice");
 
-        Loan loan = borrowBookUseCase.borrow(
-                new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+        Loan loan = borrowUseCase.borrow(
+                new BorrowUseCase.BorrowCommand(member.getId(), book.getId()));
 
-        returnBookUseCase.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnUseCase.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
         assertThat(outboxRepo.findByPublishedFalse())
                 .noneMatch(e -> e.getEventType().equals("BookReadyForMemberEvent"));
@@ -74,15 +77,15 @@ class BookReturnedEventIT {
         Member borrower = addMember("Alice");
         Member waiter = addMember("Bob");
 
-        Loan loan = borrowBookUseCase.borrow(
-                new BorrowBookUseCase.BorrowCommand(borrower.getId(), book.getId()));
-        reserveBookUseCase.reserve(
-                new ReserveBookUseCase.ReserveCommand(waiter.getId(), book.getId()));
+        Loan loan = borrowUseCase.borrow(
+                new BorrowUseCase.BorrowCommand(borrower.getId(), book.getId()));
+        reserveUseCase.reserve(
+                new ReserveUseCase.ReserveCommand(waiter.getId(), book.getId()));
 
-        returnBookUseCase.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnUseCase.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
-        borrowBookUseCase.borrow(
-                new BorrowBookUseCase.BorrowCommand(waiter.getId(), book.getId()));
+        borrowUseCase.borrow(
+                new BorrowUseCase.BorrowCommand(waiter.getId(), book.getId()));
 
         assertThat(loadReservationPort.findFirstByBookId(book.getId())).isEmpty();
     }
@@ -94,15 +97,15 @@ class BookReturnedEventIT {
         Member waiter = addMember("Bob");
         Member interloper = addMember("Carol");
 
-        Loan loan = borrowBookUseCase.borrow(
-                new BorrowBookUseCase.BorrowCommand(borrower.getId(), book.getId()));
-        reserveBookUseCase.reserve(
-                new ReserveBookUseCase.ReserveCommand(waiter.getId(), book.getId()));
+        Loan loan = borrowUseCase.borrow(
+                new BorrowUseCase.BorrowCommand(borrower.getId(), book.getId()));
+        reserveUseCase.reserve(
+                new ReserveUseCase.ReserveCommand(waiter.getId(), book.getId()));
 
-        returnBookUseCase.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnUseCase.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
-        assertThatThrownBy(() -> borrowBookUseCase.borrow(
-                new BorrowBookUseCase.BorrowCommand(interloper.getId(), book.getId())))
+        assertThatThrownBy(() -> borrowUseCase.borrow(
+                new BorrowUseCase.BorrowCommand(interloper.getId(), book.getId())))
                 .isInstanceOf(BookReservedForOtherMemberException.class);
     }
 
@@ -113,21 +116,21 @@ class BookReturnedEventIT {
         Member first = addMember("Bob");
         Member second = addMember("Carol");
 
-        Loan loan = borrowBookUseCase.borrow(
-                new BorrowBookUseCase.BorrowCommand(borrower.getId(), book.getId()));
-        reserveBookUseCase.reserve(new ReserveBookUseCase.ReserveCommand(first.getId(), book.getId()));
-        reserveBookUseCase.reserve(new ReserveBookUseCase.ReserveCommand(second.getId(), book.getId()));
+        Loan loan = borrowUseCase.borrow(
+                new BorrowUseCase.BorrowCommand(borrower.getId(), book.getId()));
+        reserveUseCase.reserve(new ReserveUseCase.ReserveCommand(first.getId(), book.getId()));
+        reserveUseCase.reserve(new ReserveUseCase.ReserveCommand(second.getId(), book.getId()));
 
-        returnBookUseCase.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnUseCase.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
         assertThat(loadReservationPort.findFirstByBookId(book.getId()))
                 .isPresent()
                 .get()
                 .satisfies(r -> assertThat(r.getMemberId()).isEqualTo(first.getId()));
 
-        Loan secondLoan = borrowBookUseCase.borrow(
-                new BorrowBookUseCase.BorrowCommand(first.getId(), book.getId()));
-        returnBookUseCase.returnBook(new ReturnBookUseCase.ReturnCommand(secondLoan.getId()));
+        Loan secondLoan = borrowUseCase.borrow(
+                new BorrowUseCase.BorrowCommand(first.getId(), book.getId()));
+        returnUseCase.returnBook(new ReturnUseCase.ReturnCommand(secondLoan.getId()));
 
         assertThat(loadReservationPort.findFirstByBookId(book.getId()))
                 .isPresent()

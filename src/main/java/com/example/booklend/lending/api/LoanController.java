@@ -2,9 +2,9 @@ package com.example.booklend.lending.api;
 
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.lending.api.dto.BorrowRequest;
-import com.example.booklend.lending.application.port.in.BorrowBookUseCase;
+import com.example.booklend.lending.application.port.in.BorrowUseCase;
 import com.example.booklend.lending.application.port.in.LoanQueryUseCase;
-import com.example.booklend.lending.application.port.in.ReturnBookUseCase;
+import com.example.booklend.lending.application.port.in.ReturnUseCase;
 import com.example.booklend.lending.domain.Loan;
 import com.example.booklend.lending.domain.LoanId;
 import com.example.booklend.member.domain.MemberId;
@@ -27,14 +27,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LoanController {
 
-    private final BorrowBookUseCase borrowBookUseCase;
-    private final ReturnBookUseCase returnBookUseCase;
+    private final BorrowUseCase borrowUseCase;
+    private final ReturnUseCase returnUseCase;
     private final LoanQueryUseCase loanQueryUseCase;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     LoanResponse borrow(@RequestBody BorrowRequest request) {
-        Loan loan = borrowBookUseCase.borrow(new BorrowBookUseCase.BorrowCommand(
+        Loan loan = borrowUseCase.borrow(new BorrowUseCase.BorrowCommand(
                 MemberId.of(request.memberId()),
                 BookId.of(request.bookId())
         ));
@@ -43,8 +43,8 @@ public class LoanController {
 
     @PostMapping("/{loanId}/return")
     LoanResponse returnBook(@PathVariable String loanId) {
-        Loan loan = returnBookUseCase.returnBook(
-                new ReturnBookUseCase.ReturnCommand(LoanId.of(loanId)));
+        Loan loan = returnUseCase.returnBook(
+                new ReturnUseCase.ReturnCommand(LoanId.of(loanId)));
         return LoanResponse.from(loan);
     }
 

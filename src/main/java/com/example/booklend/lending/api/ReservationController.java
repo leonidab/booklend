@@ -2,7 +2,7 @@ package com.example.booklend.lending.api;
 
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.lending.api.dto.ReserveRequest;
-import com.example.booklend.lending.application.port.in.ReserveBookUseCase;
+import com.example.booklend.lending.application.port.in.ReserveUseCase;
 import com.example.booklend.lending.application.port.out.LoadReservationPort;
 import com.example.booklend.lending.domain.Reservation;
 import com.example.booklend.member.domain.MemberId;
@@ -24,13 +24,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReservationController {
 
-    private final ReserveBookUseCase reserveBookUseCase;
+    private final ReserveUseCase reserveUseCase;
     private final LoadReservationPort loadReservationPort;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     ReservationResponse reserve(@RequestBody ReserveRequest request) {
-        Reservation reservation = reserveBookUseCase.reserve(new ReserveBookUseCase.ReserveCommand(
+        Reservation reservation = reserveUseCase.reserve(new ReserveUseCase.ReserveCommand(
                 MemberId.of(request.memberId()),
                 BookId.of(request.bookId())
         ));

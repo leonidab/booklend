@@ -5,7 +5,7 @@ import com.example.booklend.catalog.domain.Book;
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.catalog.domain.ISBN;
 import com.example.booklend.catalog.domain.exception.BookNotAvailableException;
-import com.example.booklend.lending.application.port.in.BorrowBookUseCase;
+import com.example.booklend.lending.application.port.in.BorrowUseCase;
 import com.example.booklend.lending.domain.*;
 import com.example.booklend.lending.domain.exception.BookReservedForOtherMemberException;
 import com.example.booklend.lending.domain.exception.OverdueLoanException;
@@ -25,7 +25,7 @@ import java.time.temporal.ChronoUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class BorrowBookServiceTest {
+class LendingServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-01-15T10:00:00Z");
 
@@ -35,7 +35,7 @@ class BorrowBookServiceTest {
     private InMemoryReservationRepository reservationRepo;
     private InMemoryDomainEventPublisher eventPublisher;
     private FakeClockAdapter clock;
-    private BorrowBookService service;
+    private LendingService service;
 
     @BeforeEach
     void setUp() {
@@ -51,7 +51,7 @@ class BorrowBookServiceTest {
         eventPublisher.register(BookBorrowedEvent.class, bookHandler::onBookBorrowed);
         eventPublisher.register(BookBorrowedEvent.class, memberHandler::onBookBorrowed);
 
-        service = new BorrowBookService(loanRepo, loanRepo, reservationRepo, reservationRepo,
+        service = new LendingService(loanRepo, loanRepo, reservationRepo, reservationRepo,
                 eventPublisher, clock);
     }
 
@@ -72,7 +72,7 @@ class BorrowBookServiceTest {
         Member member = savedMember();
         Book book = savedAvailableBook();
 
-        Loan loan = service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+        Loan loan = service.borrow(new BorrowUseCase.BorrowCommand(member.getId(), book.getId()));
 
         assertThat(loan.getStatus()).isEqualTo(LoanStatus.ACTIVE);
         assertThat(loan.getMemberId()).isEqualTo(member.getId());
@@ -85,7 +85,7 @@ class BorrowBookServiceTest {
         Member member = savedMember();
         Book book = savedAvailableBook();
 
-        service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+        service.borrow(new BorrowUseCase.BorrowCommand(member.getId(), book.getId()));
 
         assertThat(bookRepo.loadBook(book.getId()).isAvailable()).isFalse();
     }
@@ -95,7 +95,7 @@ class BorrowBookServiceTest {
         Member member = savedMember();
         Book book = savedAvailableBook();
 
-        service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+        service.borrow(new BorrowUseCase.BorrowCommand(member.getId(), book.getId()));
 
         assertThat(memberRepo.loadMember(member.getId()).getActiveLoansCount()).isEqualTo(1);
     }
@@ -105,7 +105,7 @@ class BorrowBookServiceTest {
         Member member = savedMember();
         Book book = savedAvailableBook();
 
-        Loan loan = service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+        Loan loan = service.borrow(new BorrowUseCase.BorrowCommand(member.getId(), book.getId()));
 
         assertThat(eventPublisher.getPublished())
                 .anySatisfy(e -> {
@@ -124,7 +124,7 @@ class BorrowBookServiceTest {
         bookRepo.save(book);
 
         assertThatThrownBy(() -> service.borrow(
-                new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId())))
+                new BorrowUseCase.BorrowCommand(member.getId(), book.getId())))
                 .isInstanceOf(BookNotAvailableException.class);
     }
 
@@ -133,12 +133,12 @@ class BorrowBookServiceTest {
         Member member = savedMember();
         for (int i = 0; i < 3; i++) {
             Book book = savedAvailableBook();
-            service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+            service.borrow(new BorrowUseCase.BorrowCommand(member.getId(), book.getId()));
         }
         Book extra = savedAvailableBook();
 
         assertThatThrownBy(() -> service.borrow(
-                new BorrowBookUseCase.BorrowCommand(member.getId(), extra.getId())))
+                new BorrowUseCase.BorrowCommand(member.getId(), extra.getId())))
                 .isInstanceOf(MaxLoansExceededException.class);
     }
 
@@ -147,7 +147,7 @@ class BorrowBookServiceTest {
         Member member = savedMember();
         for (int i = 0; i < 3; i++) {
             Book b = savedAvailableBook();
-            Loan loan = service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), b.getId()));
+            Loan loan = service.borrow(new BorrowUseCase.BorrowCommand(member.getId(), b.getId()));
             loanRepo.saveLoan(lateReturnedLoan(loan));
             member = memberRepo.loadMember(member.getId());
             member.recordLoanReturned(true);
@@ -157,7 +157,7 @@ class BorrowBookServiceTest {
         Member freshMember = memberRepo.loadMember(member.getId());
         Book extra = savedAvailableBook();
         assertThatThrownBy(() -> service.borrow(
-                new BorrowBookUseCase.BorrowCommand(freshMember.getId(), extra.getId())))
+                new BorrowUseCase.BorrowCommand(freshMember.getId(), extra.getId())))
                 .isInstanceOf(MemberRestrictedException.class);
     }
 
@@ -165,13 +165,13 @@ class BorrowBookServiceTest {
     void borrow_failsWhenMemberHasOverdueLoan() {
         Member member = savedMember();
         Book book1 = savedAvailableBook();
-        service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book1.getId()));
+        service.borrow(new BorrowUseCase.BorrowCommand(member.getId(), book1.getId()));
 
         clock.advanceTo(NOW.plus(20, ChronoUnit.DAYS));
 
         Book book2 = savedAvailableBook();
         assertThatThrownBy(() -> service.borrow(
-                new BorrowBookUseCase.BorrowCommand(member.getId(), book2.getId())))
+                new BorrowUseCase.BorrowCommand(member.getId(), book2.getId())))
                 .isInstanceOf(OverdueLoanException.class);
     }
 
@@ -185,7 +185,7 @@ class BorrowBookServiceTest {
                 ReservationId.newId(), book.getId(), otherMember.getId(), NOW));
 
         assertThatThrownBy(() -> service.borrow(
-                new BorrowBookUseCase.BorrowCommand(borrower.getId(), book.getId())))
+                new BorrowUseCase.BorrowCommand(borrower.getId(), book.getId())))
                 .isInstanceOf(BookReservedForOtherMemberException.class);
     }
 
@@ -197,7 +197,7 @@ class BorrowBookServiceTest {
         reservationRepo.saveReservation(Reservation.create(
                 ReservationId.newId(), book.getId(), member.getId(), NOW));
 
-        service.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+        service.borrow(new BorrowUseCase.BorrowCommand(member.getId(), book.getId()));
 
         assertThat(reservationRepo.findFirstByBookId(book.getId())).isEmpty();
     }

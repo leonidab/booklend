@@ -4,7 +4,7 @@ import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.lending.domain.Loan;
 import com.example.booklend.member.domain.MemberId;
 
-public interface BorrowBookUseCase {
+public interface BorrowUseCase {
 
     record BorrowCommand(MemberId memberId, BookId bookId) {}
 

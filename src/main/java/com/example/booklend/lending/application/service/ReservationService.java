@@ -1,7 +1,7 @@
 package com.example.booklend.lending.application.service;
 
 import com.example.booklend.catalog.application.port.out.LoadBookPort;
-import com.example.booklend.lending.application.port.in.ReserveBookUseCase;
+import com.example.booklend.lending.application.port.in.ReserveUseCase;
 import com.example.booklend.lending.application.port.out.LoadReservationPort;
 import com.example.booklend.lending.application.port.out.SaveReservationPort;
 import com.example.booklend.lending.domain.Reservation;
@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class ReserveBookService implements ReserveBookUseCase {
+public class ReservationService implements ReserveUseCase {
 
     private final LoadMemberPort loadMemberPort;
     private final LoadBookPort loadBookPort;

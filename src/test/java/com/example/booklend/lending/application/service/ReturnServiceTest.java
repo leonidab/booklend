@@ -4,8 +4,8 @@ import com.example.booklend.catalog.application.service.BookLoanEventHandler;
 import com.example.booklend.catalog.domain.Book;
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.catalog.domain.ISBN;
-import com.example.booklend.lending.application.port.in.BorrowBookUseCase;
-import com.example.booklend.lending.application.port.in.ReturnBookUseCase;
+import com.example.booklend.lending.application.port.in.BorrowUseCase;
+import com.example.booklend.lending.application.port.in.ReturnUseCase;
 import com.example.booklend.lending.domain.Loan;
 import com.example.booklend.lending.domain.LoanStatus;
 import com.example.booklend.lending.domain.Reservation;
@@ -33,7 +33,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ReturnBookServiceTest {
+class ReturnServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-01-15T10:00:00Z");
 
@@ -43,8 +43,8 @@ class ReturnBookServiceTest {
     private InMemoryReservationRepository reservationRepo;
     private InMemoryDomainEventPublisher eventPublisher;
     private FakeClockAdapter clock;
-    private BorrowBookService borrowService;
-    private ReturnBookService returnService;
+    private LendingService borrowService;
+    private ReturnService returnService;
 
     @BeforeEach
     void setUp() {
@@ -62,9 +62,9 @@ class ReturnBookServiceTest {
         eventPublisher.register(BookReturnedEvent.class, bookHandler::onBookReturned);
         eventPublisher.register(BookReturnedEvent.class, memberHandler::onBookReturned);
 
-        borrowService = new BorrowBookService(loanRepo, loanRepo, reservationRepo, reservationRepo,
+        borrowService = new LendingService(loanRepo, loanRepo, reservationRepo, reservationRepo,
                 eventPublisher, clock);
-        returnService = new ReturnBookService(loanRepo, loanRepo, reservationRepo, eventPublisher, clock);
+        returnService = new ReturnService(loanRepo, loanRepo, reservationRepo, eventPublisher, clock);
     }
 
     private Member savedMember() {
@@ -80,7 +80,7 @@ class ReturnBookServiceTest {
     }
 
     private Loan borrowBook(Member member, Book book) {
-        Loan loan = borrowService.borrow(new BorrowBookUseCase.BorrowCommand(member.getId(), book.getId()));
+        Loan loan = borrowService.borrow(new BorrowUseCase.BorrowCommand(member.getId(), book.getId()));
         eventPublisher.clear();
         return loan;
     }
@@ -91,7 +91,7 @@ class ReturnBookServiceTest {
         Book book = savedBook();
         Loan loan = borrowBook(member, book);
 
-        Loan returned = returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        Loan returned = returnService.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
         assertThat(returned.getStatus()).isEqualTo(LoanStatus.RETURNED);
     }
@@ -102,7 +102,7 @@ class ReturnBookServiceTest {
         Book book = savedBook();
         Loan loan = borrowBook(member, book);
 
-        returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnService.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
         assertThat(bookRepo.loadBook(book.getId()).isAvailable()).isTrue();
     }
@@ -113,7 +113,7 @@ class ReturnBookServiceTest {
         Book book = savedBook();
         Loan loan = borrowBook(member, book);
 
-        returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnService.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
         assertThat(memberRepo.loadMember(member.getId()).getActiveLoansCount()).isZero();
     }
@@ -124,7 +124,7 @@ class ReturnBookServiceTest {
         Book book = savedBook();
         Loan loan = borrowBook(member, book);
 
-        returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnService.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
         assertThat(eventPublisher.getPublished()).hasAtLeastOneElementOfType(BookReturnedEvent.class);
     }
@@ -135,7 +135,7 @@ class ReturnBookServiceTest {
         Book book = savedBook();
         Loan loan = borrowBook(member, book);
 
-        returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnService.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
         assertThat(eventPublisher.getPublished())
                 .noneMatch(e -> e instanceof BookReadyForMemberEvent);
@@ -151,7 +151,7 @@ class ReturnBookServiceTest {
         reservationRepo.saveReservation(Reservation.create(
                 ReservationId.newId(), book.getId(), waiter.getId(), NOW));
 
-        returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnService.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
         List<DomainEvent> events = eventPublisher.getPublished();
         assertThat(events).hasAtLeastOneElementOfType(BookReadyForMemberEvent.class);
@@ -173,7 +173,7 @@ class ReturnBookServiceTest {
         reservationRepo.saveReservation(Reservation.create(
                 ReservationId.newId(), book.getId(), waiter.getId(), NOW));
 
-        returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnService.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
         assertThat(reservationRepo.findFirstByBookId(book.getId())).isPresent();
     }
@@ -185,7 +185,7 @@ class ReturnBookServiceTest {
         Loan loan = borrowBook(member, book);
 
         clock.advanceTo(NOW.plus(20, ChronoUnit.DAYS));
-        returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+        returnService.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
 
         assertThat(memberRepo.loadMember(member.getId()).getLateReturnCount()).isEqualTo(1);
     }
@@ -199,7 +199,7 @@ class ReturnBookServiceTest {
             Book book = savedBook();
             Loan loan = borrowBook(member, book);
             clock.advanceTo(NOW.plus(20, ChronoUnit.DAYS));
-            returnService.returnBook(new ReturnBookUseCase.ReturnCommand(loan.getId()));
+            returnService.returnBook(new ReturnUseCase.ReturnCommand(loan.getId()));
             member = memberRepo.loadMember(member.getId());
         }
 

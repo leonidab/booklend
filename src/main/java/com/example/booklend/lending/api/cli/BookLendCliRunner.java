@@ -3,10 +3,10 @@ package com.example.booklend.lending.api.cli;
 import com.example.booklend.catalog.application.port.in.CatalogAdminUseCase;
 import com.example.booklend.catalog.domain.BookId;
 import com.example.booklend.catalog.domain.ISBN;
-import com.example.booklend.lending.application.port.in.BorrowBookUseCase;
+import com.example.booklend.lending.application.port.in.BorrowUseCase;
 import com.example.booklend.lending.application.port.in.LoanQueryUseCase;
-import com.example.booklend.lending.application.port.in.ReserveBookUseCase;
-import com.example.booklend.lending.application.port.in.ReturnBookUseCase;
+import com.example.booklend.lending.application.port.in.ReserveUseCase;
+import com.example.booklend.lending.application.port.in.ReturnUseCase;
 import com.example.booklend.lending.domain.Loan;
 import com.example.booklend.lending.domain.LoanId;
 import com.example.booklend.lending.domain.Reservation;
@@ -31,9 +31,9 @@ import java.util.Scanner;
 @RequiredArgsConstructor
 public class BookLendCliRunner implements ApplicationRunner {
 
-    private final BorrowBookUseCase borrowBookUseCase;
-    private final ReturnBookUseCase returnBookUseCase;
-    private final ReserveBookUseCase reserveBookUseCase;
+    private final BorrowUseCase borrowUseCase;
+    private final ReturnUseCase returnUseCase;
+    private final ReserveUseCase reserveUseCase;
     private final CatalogAdminUseCase catalogAdminUseCase;
     private final MemberAdminUseCase memberAdminUseCase;
     private final LoanQueryUseCase loanQueryUseCase;
@@ -74,21 +74,21 @@ public class BookLendCliRunner implements ApplicationRunner {
 
     private void handleBorrow(String[] parts) {
         requireArgs(parts, 3, "borrow <memberId> <bookId>");
-        Loan loan = borrowBookUseCase.borrow(new BorrowBookUseCase.BorrowCommand(
+        Loan loan = borrowUseCase.borrow(new BorrowUseCase.BorrowCommand(
                 MemberId.of(parts[1]), BookId.of(parts[2])));
         System.out.printf("Loan created: id=%s  due=%s%n", loan.getId(), loan.getPeriod().dueDate());
     }
 
     private void handleReturn(String[] parts) {
         requireArgs(parts, 2, "return <loanId>");
-        Loan loan = returnBookUseCase.returnBook(
-                new ReturnBookUseCase.ReturnCommand(LoanId.of(parts[1])));
+        Loan loan = returnUseCase.returnBook(
+                new ReturnUseCase.ReturnCommand(LoanId.of(parts[1])));
         System.out.printf("Returned loan %s  (late=%s)%n", loan.getId(), loan.wasReturnedLate());
     }
 
     private void handleReserve(String[] parts) {
         requireArgs(parts, 3, "reserve <memberId> <bookId>");
-        Reservation r = reserveBookUseCase.reserve(new ReserveBookUseCase.ReserveCommand(
+        Reservation r = reserveUseCase.reserve(new ReserveUseCase.ReserveCommand(
                 MemberId.of(parts[1]), BookId.of(parts[2])));
         System.out.printf("Reservation created: id=%s%n", r.getId());
     }
